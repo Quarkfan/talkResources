@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 工具场景检索</title>
+<style>
+:root {
+  --bg: #f5f7fa; --card: #fff; --primary: #4f6ef7; --primary-hover: #3b5de7;
+  --text: #1a1a2e; --text-secondary: #666; --border: #e0e4ea;
+  --green: #22c55e; --yellow: #eab308; --red: #ef4444; --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+h1 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
+.subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 28px; font-size: .9rem; }
+
+/* Search */
+.search-box { display: flex; gap: 10px; margin-bottom: 16px; }
+.search-box input { flex: 1; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; outline: none; transition: border-color .2s; }
+.search-box input:focus { border-color: var(--primary); }
+.search-box button { padding: 12px 24px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); font-size: 1rem; cursor: pointer; transition: background .2s; white-space: nowrap; }
+.search-box button:hover { background: var(--primary-hover); }
+.search-box button:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Quick queries */
+.quick-queries { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.quick-queries button { padding: 6px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; font-size: .82rem; cursor: pointer; transition: all .15s; color: var(--text-secondary); }
+.quick-queries button:hover { border-color: var(--primary); color: var(--primary); }
+
+/* Results */
+#results { margin-bottom: 32px; }
+.result-card { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.result-card h3 { font-size: 1.05rem; margin-bottom: 10px; color: var(--primary); }
+.result-card p { color: var(--text-secondary); line-height: 1.6; font-size: .92rem; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.tool-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.tool-card h4 { font-size: .95rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+.tool-card h4 span { font-size: .75rem; padding: 2px 8px; border-radius: 10px; color: #fff; }
+.score-high { background: var(--green); }
+.score-mid { background: var(--yellow); }
+.score-low { background: var(--red); }
+.tool-card p { font-size: .84rem; color: var(--text-secondary); line-height: 1.5; }
+.pain-list { list-style: none; padding: 0; }
+.pain-list li { padding: 4px 0; padding-left: 18px; position: relative; font-size: .9rem; color: var(--text-secondary); }
+.pain-list li::before { content: "•"; position: absolute; left: 4px; color: var(--primary); }
+.tips-list { list-style: none; padding: 0; }
+.tips-list li { padding: 4px 0; padding-left: 18px; position: relative; font-size: .88rem; color: var(--text-secondary); }
+.tips-list li::before { content: "💡"; position: absolute; left: 0; }
+
+/* Streaming indicator */
+.streaming { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse .8s infinite; margin-left: 8px; vertical-align: middle; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* History */
+.history { margin-top: 8px; }
+.history h2 { font-size: 1.1rem; margin-bottom: 12px; color: var(--text-secondary); }
+.history-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; cursor: pointer; font-size: .88rem; transition: border-color .15s; display: flex; justify-content: space-between; align-items: center; }
+.history-item:hover { border-color: var(--primary); }
+.history-item .time { font-size: .75rem; color: #aaa; }
+.history-item .del { color: #ccc; cursor: pointer; font-size: 1.1rem; padding: 0 4px; }
+.history-item .del:hover { color: var(--red); }
+
+/* Error */
+.error-msg { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: .9rem; }
+
+/* Loading skeleton */
+.skeleton { height: 14px; background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; margin-bottom: 8px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI 工具场景检索</h1>
+  <p class="subtitle">输入你的工作场景、痛点或想法，获取工具组合推荐</p>
+
+  <div class="search-box">
+    <input type="text" id="queryInput" placeholder="描述你的工作场景或痛点..." autocomplete="off">
+    <button id="queryBtn" onclick="doQuery()">检索</button>
+  </div>
+
+  <div class="quick-queries">
+    <button onclick="quickQuery(this)">分析竞品的配方成分</button>
+    <button onclick="quickQuery(this)">批量生成产品短视频用于抖音</button>
+    <button onclick="quickQuery(this)">财务每天花2小时整理发票</button>
+    <button onclick="quickQuery(this)">自动抓取全网法规更新</button>
+    <button onclick="quickQuery(this)">新品上市的市场调研</button>
+    <button onclick="quickQuery(this)">客服话术自动生成</button>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="history">
+    <h2>查询历史</h2>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const resultsEl = $("results");
+const inputEl = $("queryInput");
+const btnEl = $("queryBtn");
+let abortCtrl = null;
+
+inputEl.addEventListener("keydown", e => { if (e.key === "Enter" && !btnEl.disabled) doQuery(); });
+
+function quickQuery(el) { inputEl.value = el.textContent; doQuery(); }
+
+function saveHistory(query) {
+  let h = JSON.parse(localStorage.getItem("queryHistory") || "[]");
+  h = h.filter(x => x.q !== query);
+  h.unshift({ q: query, t: Date.now() });
+  if (h.length > 20) h = h.slice(0, 20);
+  localStorage.setItem("queryHistory", JSON.stringify(h));
+  renderHistory();
+}
+
+function renderHistory() {
+  const h = JSON.parse(localStorage.getItem("queryHistory") || "[]");
+  $("historyList").innerHTML = h.length === 0 ? "<p style='color:#aaa;font-size:.85rem'>暂无记录</p>"
+    : h.map((item, i) => `<div class="history-item" onclick="requery('${item.q.replace(/'/g, "\\'")}')">
+        <span>${escHtml(item.q)}</span><span class="time">${ago(item.t)}</span>
+        <span class="del" onclick="event.stopPropagation();delHistory(${i})">×</span>
+      </div>`).join("");
+}
+
+function requery(q) { inputEl.value = q; doQuery(); }
+function delHistory(i) {
+  let h = JSON.parse(localStorage.getItem("queryHistory") || "[]");
+  h.splice(i, 1);
+  localStorage.setItem("queryHistory", JSON.stringify(h));
+  renderHistory();
+}
+
+function ago(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "刚刚";
+  if (s < 3600) return Math.floor(s / 60) + "分钟前";
+  if (s < 86400) return Math.floor(s / 3600) + "小时前";
+  return new Date(ts).toLocaleDateString();
+}
+
+function escHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function scoreClass(score) { return score >= 80 ? "score-high" : score >= 50 ? "score-mid" : "score-low"; }
+
+function showLoading() {
+  resultsEl.innerHTML = `<div class="result-card"><h3>正在分析<span class="streaming"></span></h3>
+    <div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:60%"></div>
+    <div class="skeleton" style="width:90%"></div></div>`;
+}
+
+function renderError(msg) {
+  resultsEl.innerHTML = `<div class="error-msg">❌ ${escHtml(msg)}</div>`;
+}
+
+function renderResult(obj) {
+  let html = "";
+  if (obj.scene_match) {
+    html += `<div class="result-card"><h3>📂 场景匹配</h3><p>${escHtml(obj.scene_match)}</p></div>`;
+  }
+  if (obj.pain_points && obj.pain_points.length) {
+    html += `<div class="result-card"><h3>🎯 识别到的痛点</h3><ul class="pain-list">${obj.pain_points.map(p => `<li>${escHtml(p)}</li>`).join("")}</ul></div>`;
+  }
+  if (obj.tools && obj.tools.length) {
+    html += `<div class="result-card"><h3>🛠 推荐工具</h3><div class="tool-grid">`;
+    for (const t of obj.tools) {
+      const sc = t.match_score || 0;
+      html += `<div class="tool-card"><h4>${escHtml(t.name)} <span class="${scoreClass(sc)}">${sc}分</span></h4>
+        <p><b>核心能力：</b>${escHtml(t.core_ability || "—")}</p>
+        <p><b>推荐理由：</b>${escHtml(t.why_recommended || "—")}</p></div>`;
+    }
+    html += `</div></div>`;
+  }
+  if (obj.combination_advice) {
+    html += `<div class="result-card"><h3>🔗 组合建议</h3><p>${escHtml(obj.combination_advice)}</p></div>`;
+  }
+  if (obj.extra_tips && obj.extra_tips.length) {
+    html += `<div class="result-card"><h3>📌 额外提示</h3><ul class="tips-list">${obj.extra_tips.map(t => `<li>${escHtml(t)}</li>`).join("")}</ul></div>`;
+  }
+  resultsEl.innerHTML = html;
+}
+
+async function doQuery() {
+  const q = inputEl.value.trim();
+  if (!q) return;
+  btnEl.disabled = true;
+  showLoading();
+  saveHistory(q);
+
+  let buffer = "";
+  try {
+    abortCtrl = new AbortController();
+    const resp = await fetch("/api/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q }),
+      signal: abortCtrl.signal,
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      tryParseAndRender(buffer);
+    }
+    // final parse attempt
+    tryParseAndRender(buffer);
+    // if nothing parsed, show raw text
+    if (!resultsEl.innerHTML.trim()) {
+      resultsEl.innerHTML = `<div class="result-card"><pre style="white-space:pre-wrap;font-size:.88rem;word-break:break-word">${escHtml(buffer)}</pre></div>`;
+    }
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    renderError(e.message);
+  } finally {
+    btnEl.disabled = false;
+    abortCtrl = null;
+  }
+}
+
+function tryParseAndRender(text) {
+  // Try to find JSON in accumulated text (may have SSE prefixes)
+  let cleaned = text.replace(/^data: [^\n]*\n?/gm, "");
+  // Try parsing the whole thing as JSON
+  try {
+    const obj = JSON.parse(cleaned);
+    if (obj.tools || obj.scene_match || obj.pain_points) {
+      renderResult(obj);
+      return;
+    }
+  } catch {}
+  // Try finding JSON object in text
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    try {
+      const obj = JSON.parse(cleaned.slice(start, end + 1));
+      if (obj.tools || obj.scene_match || obj.pain_points) {
+        renderResult(obj);
+      }
+    } catch {}
+  }
+}
+
+renderHistory();
+</script>
+</body>
+</html>

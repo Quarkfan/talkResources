@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 是隐性知识的助产师</title>
+<style>
+  :root {
+    --bg: #060e1a;
+    --bg-light: #111d33;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --accent3: #34d399;
+    --text: #f0f9ff;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --card: rgba(56, 189, 248, 0.06);
+    --border: rgba(56, 189, 248, 0.15);
+    --success: #34d399;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-break: normal;
+  }
+
+  .grid-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(140px); opacity: 0.08;
+    pointer-events: none; z-index: 0;
+    animation: orbFloat 30s ease-in-out infinite;
+  }
+  .orb-1 { width: 700px; height: 700px; background: var(--accent); top: -20%; left: -15%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -20%; right: -15%; animation-delay: -10s; }
+  .orb-3 { width: 400px; height: 400px; background: var(--accent3); top: 30%; left: 50%; animation-delay: -20s; }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.1); }
+    66% { transform: translate(-40px, 60px) scale(0.9); }
+  }
+
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    padding: 56px 72px 72px;
+    position: absolute; top: 0; left: 0;
+    flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+  @keyframes enterRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes enterLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-number {
+    position: absolute; top: 20px; right: 32px;
+    font-size: 0.72rem; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  .slide.chapter { align-items: center; text-align: center; }
+  .slide.chapter .chapter-num {
+    font-size: 0.78rem; color: var(--text-muted);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .slide.chapter h1 { font-size: 2.6rem; font-weight: 800; line-height: 1.25; margin-bottom: 14px; }
+  .slide.chapter .chapter-desc { font-size: 1.05rem; color: var(--text-dim); max-width: 600px; line-height: 1.7; }
+
+  .slide.title-slide { align-items: center; text-align: center; }
+
+  .slide h1 {
+    font-size: 2.2rem; font-weight: 800;
+    line-height: 1.25; letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+  .slide h1 .accent { color: var(--accent); }
+  .slide h1 .accent2 { color: var(--accent2); }
+  .slide h1 .accent3 { color: var(--accent3); }
+
+  .slide h2 {
+    font-size: 1.5rem; font-weight: 700;
+    line-height: 1.35; margin-bottom: 14px;
+    max-width: 900px;
+  }
+
+  .slide h3 {
+    font-size: 0.95rem; font-weight: 600;
+    color: var(--accent); margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 0.95rem; color: var(--text-dim);
+    line-height: 1.7; max-width: 800px;
+    text-wrap: pretty;
+  }
+
+  .quote {
+    font-size: 1.1rem; font-weight: 600;
+    line-height: 1.55; color: var(--accent);
+    padding-left: 22px; border-left: 3px solid var(--accent);
+    margin: 14px 0;
+    text-wrap: pretty;
+  }
+
+  .highlight-text {
+    font-size: 1.3rem; font-weight: 700;
+    line-height: 1.5; text-align: center;
+    max-width: 740px; margin: 0 auto;
+  }
+
+  .list-item {
+    font-size: 0.9rem; color: var(--text-dim);
+    line-height: 1.75; padding: 3px 0 3px 20px;
+    position: relative;
+  }
+  .list-item::before {
+    content: "·"; position: absolute; left: 0;
+    color: var(--accent); font-weight: bold; font-size: 1.3rem;
+  }
+
+  .tag-noun { color: var(--text-muted); }
+  .tag-verb { color: var(--success); }
+
+  .card-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px; margin-top: 14px;
+  }
+
+  .card {
+    background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card h3 { font-size: 0.88rem; margin-bottom: 6px; }
+  .card p { font-size: 0.8rem; color: var(--text-dim); line-height: 1.55; text-wrap: pretty; }
+
+  .flywheel {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 5px; margin: 12px 0;
+    font-size: 0.78rem; font-weight: 600;
+  }
+  .flywheel .node {
+    padding: 5px 11px; border-radius: 7px;
+    background: var(--bg-light); border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .flywheel .arrow { color: var(--accent); font-size: 0.95rem; }
+
+  .table-container { margin-top: 12px; }
+  .table-container table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .table-container th {
+    text-align: left; padding: 8px 10px;
+    font-weight: 600; color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    font-size: 0.76rem; letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .table-container td {
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(56,189,248,0.06);
+    color: var(--text-dim);
+  }
+  .table-container tr:hover td { color: var(--text); background: var(--card); }
+
+  .two-col { display: flex; gap: 28px; margin-top: 12px; }
+  .two-col > div { flex: 1; }
+  .two-col h3 { font-size: 0.9rem; margin-bottom: 6px; }
+
+  .big-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: var(--bg);
+    font-weight: 700; font-size: 0.78rem;
+    margin-right: 8px; flex-shrink: 0;
+  }
+
+  .feature-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.82rem; }
+  .feature-table th { text-align: left; padding: 6px 10px; color: var(--accent); border-bottom: 1px solid var(--border); font-size: 0.74rem; }
+  .feature-table td { padding: 5px 10px; border-bottom: 1px solid rgba(56,189,248,0.06); color: var(--text-dim); }
+  .feature-table tr:hover td { color: var(--text); background: var(--card); }
+
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    height: 48px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 100;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    font-size: 0.82rem; transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .progress-bar { flex: 1; margin: 0 16px; height: 3px; background: var(--bg-light); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .slide-counter { color: var(--text-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+
+  .toc { max-width: 680px; margin: 0 auto; }
+  .toc-item { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(56,189,248,0.06); }
+  .toc-num { font-size: 1.3rem; font-weight: 800; color: var(--accent); line-height: 1; min-width: 34px; }
+  .toc-title { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+  .toc-desc { font-size: 0.8rem; color: var(--text-muted); }
+
+  @media (max-width: 768px) {
+    .slide { padding: 32px 18px 64px; }
+    .slide h1 { font-size: 1.5rem; }
+    .slide.chapter h1 { font-size: 1.7rem; }
+    .slide h2 { font-size: 1.1rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .two-col { flex-direction: column; gap: 10px; }
+    .flywheel { font-size: 0.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="slide-container" id="slides">
+
+<!-- ==================== 封面 ==================== -->
+<div class="slide title-slide">
+  <div class="section-tag">AI 分享 · 认知层</div>
+  <h1 style="margin-top: 20px;">AI 是隐性知识的<br><span class="accent">助产师</span></h1>
+  <p class="subtitle" style="margin: 16px auto 0; font-size: 0.95rem; color: var(--text-dim); max-width: 620px;">
+    苏格拉底说自己是思想的助产士——通过追问帮人把思想"生"出来。<br>今天的 AI 也在扮演类似的角色：帮助我们看见"自己原本不知道自己知道"的东西。
+  </p>
+  <p style="margin-top: 28px; font-size: 0.7rem; color: var(--text-muted);">← → 或点击底部导航切换</p>
+</div>
+
+<!-- ==================== 定调 ==================== -->
+<div class="slide">
+  <div class="section-tag">定调</div>
+  <h2>AI 不只是效率工具<br>也是一种<span class="accent">认知工具</span></h2>
+  <p class="subtitle" style="margin-top: 12px;">很多人分享 AI，会介绍工具、技巧和应用场景：</p>
+  <div class="card-grid" style="margin-top: 12px;">
+    <div class="card"><p>AI 写文案、做图</p></div>
+    <div class="card"><p>AI 编程、做客服</p></div>
+    <div class="card"><p>AI 整理资料、自动化流程</p></div>
+    <div class="card"><p>这些当然都很有价值</p></div>
+  </div>
+  <p class="subtitle" style="margin-top: 12px;">但今天想讨论一个更深层的问题：</p>
+  <div class="quote" style="margin-top: 10px;">
+    AI 正在帮助我们把原本藏在经验、判断、直觉和方法里的隐性知识提炼出来——让我们看见许多"自己原本不知道自己知道"的东西。
+  </div>
+</div>
+
+<!-- ==================== 目录 ==================== -->
+<div class="slide">
+  <div class="section-tag">目录</div>
+  <h2 style="margin-bottom: 16px;">本篇结构</h2>
+  <div class="toc">
+    <div class="toc-item">
+      <div class="toc-num">壹</div>
+      <div><div class="toc-title">AI 让人通过它向自己学习</div>
+           <div class="toc-desc">隐性知识藏在经验、判断和直觉里，AI 能通过对话把它逼出来、问出来、整理出来</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">贰</div>
+      <div><div class="toc-title">两个简单方法</div>
+           <div class="toc-desc">小白追问模式检验理解深度，反方辩论模式检验观点强度</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">叁</div>
+      <div><div class="toc-title">AI 是认知对练工具</div>
+           <div class="toc-desc">追问器、反驳器、复盘器、结构化器、压力测试器、方法论萃取器</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">肆</div>
+      <div><div class="toc-title">从经验到方法论，从方法论到工具</div>
+           <div class="toc-desc">让 AI 执行一件事，本质是在把自己的经验翻译成可复用的流程</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">伍</div>
+      <div><div class="toc-title">从个人能力到组织能力</div>
+           <div class="toc-desc">把散落在不同人脑子里的隐性经验提取出来，变成 SOP、检查清单和 agent</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">陆</div>
+      <div><div class="toc-title">AI 是人类隐性知识的助产师</div>
+           <div class="toc-desc">AI 通过追问让你讲清楚、通过反驳让你想严密、通过归纳让你看见结构</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">柒</div>
+      <div><div class="toc-title">从个人认知到企业护城河</div>
+           <div class="toc-desc">与"护城河从名词变成动词"篇呼应：AI 把持续行为系统化</div></div>
+    </div>
+    <div class="toc-item">
+      <div class="toc-num">捌</div>
+      <div><div class="toc-title">对日化行业的启发与结语</div>
+           <div class="toc-desc">爆品会被复制，持续制造爆品的系统不会那么容易被复制</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 壹：AI 让人通过它向自己学习 ==================== -->
+
+<!-- Chapter 1 -->
+<div class="slide chapter">
+  <div class="chapter-num">第一章</div>
+  <h1>AI 让人通过它<br>向<span class="accent">自己</span>学习</h1>
+  <p class="chapter-desc">过去我们谈学习，通常是向外部学习。AI 带来了另一种学习方式：通过 AI 向自己学习。</p>
+</div>
+
+<!-- 1: External vs internal learning -->
+<div class="slide">
+  <div class="slide-number">01 / 03</div>
+  <div class="section-tag">两种学习</div>
+  <h2>过去我们谈学习，通常说的是<span class="accent">向外部学习</span></h2>
+  <div class="flywheel" style="margin-top: 12px;">
+    <div class="node">书本</div><span class="arrow">+</span>
+    <div class="node">老师</div><span class="arrow">+</span>
+    <div class="node">专家</div><span class="arrow">+</span>
+    <div class="node">行业经验</div><span class="arrow">+</span>
+    <div class="node">公开资料</div>
+  </div>
+  <p class="subtitle" style="margin-top: 14px;">这个逻辑当然仍然重要。但 AI 带来了另一种学习方式：</p>
+  <div class="quote" style="margin-top: 10px;">
+    通过 AI 向自己学习。
+  </div>
+  <p class="subtitle" style="margin-top: 10px;">很多时候，一个人并不是完全不知道某件事，而是他知道得不够显性、不够结构化、不够可表达。</p>
+</div>
+
+<!-- 2: Tacit knowledge examples -->
+<div class="slide">
+  <div class="slide-number">02 / 03</div>
+  <div class="section-tag">隐性知识</div>
+  <h2>这些东西本来就藏在人的脑子里<br>只是没有被<span class="accent">命名、整理和表达</span>出来</h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3>判断方案</h3><p>他能判断一个方案是否靠谱，但说不清判断标准</p></div>
+    <div class="card"><h3>识人用人</h3><p>他能识别一个人是否适合某个岗位，但讲不清背后的依据</p></div>
+    <div class="card"><h3>技术选型</h3><p>他能做技术选型，但没有形成清晰的方法论</p></div>
+    <div class="card"><h3>项目风险</h3><p>他能判断项目风险，但判断大多停留在经验和直觉层面</p></div>
+    <div class="card"><h3>拆解问题</h3><p>他能把复杂问题拆开，但未必知道自己是如何拆解的</p></div>
+    <div class="card"><h3>客户需求</h3><p>他能判断客户需求是否真实，但很难把判断过程完整讲出来</p></div>
+  </div>
+</div>
+
+<!-- 3: AI's deep value -->
+<div class="slide">
+  <div class="slide-number">03 / 03</div>
+  <div class="section-tag">深层价值</div>
+  <h2>AI 的价值不是简单地替你生成答案<br>而是帮助你发现<span class="accent">"原来我已经有套判断体系"</span></h2>
+  <div class="quote" style="margin-top: 14px;">
+    把人的隐性知识显性化，把模糊经验结构化，把个人方法论资产化。
+  </div>
+  <p class="subtitle" style="margin-top: 14px;">AI 形成了一个新的学习循环：</p>
+  <div class="flywheel" style="margin-top: 10px;">
+    <div class="node">提取隐性经验</div><span class="arrow">→</span>
+    <div class="node">AI 追问、反驳、整理</div><span class="arrow">→</span>
+    <div class="node">引入外部知识校正</div><span class="arrow">→</span>
+    <div class="node">沉淀为方法和工作流</div>
+  </div>
+  <p class="subtitle" style="margin-top: 8px;">不是让人封闭在自己的经验里，而是让人先看清自己的经验，再用外部知识校正和放大它。</p>
+</div>
+
+<!-- ==================== 贰：两个简单方法 ==================== -->
+
+<!-- Chapter 2 -->
+<div class="slide chapter">
+  <div class="chapter-num">第二章</div>
+  <h1>两个<span class="accent">简单方法</span></h1>
+  <p class="chapter-desc">不复杂，但很有效。一个检验你是否真的懂，一个检验你的观点是否站得住。</p>
+</div>
+
+<!-- 4: Method 1 intro -->
+<div class="slide">
+  <div class="slide-number">01 / 04</div>
+  <div class="section-tag">方法一</div>
+  <h2><span class="accent">小白追问模式</span>：检验你是否真的懂</h2>
+  <p class="subtitle" style="margin-top: 10px;">AI 可以扮演一个什么都不懂的小白，不断向你追问，直到它真正听明白——或者说，直到你自己真正讲明白。</p>
+  <div class="quote" style="margin-top: 12px;">
+    请你扮演一个完全不了解这个领域的小白。我接下来会讲一个观点，你需要不断追问我。你的目标不是附和我，而是逼我把概念、逻辑、例子和边界讲清楚。
+  </div>
+</div>
+
+<!-- 5: AI questions in method 1 -->
+<div class="slide">
+  <div class="slide-number">02 / 04</div>
+  <div class="section-tag">追问</div>
+  <h2>AI 可能会这样追问：</h2>
+  <div style="margin-top: 14px;">
+    <div class="list-item">这是什么意思？</div>
+    <div class="list-item">为什么是这样？</div>
+    <div class="list-item">能不能举个例子？</div>
+    <div class="list-item">有没有反例？</div>
+    <div class="list-item">这个概念和另一个概念有什么区别？</div>
+    <div class="list-item">你这句话里的关键假设是什么？</div>
+    <div class="list-item">如果换一个场景，这个判断还成立吗？</div>
+    <div class="list-item">你说的"好""有效""靠谱"，具体标准是什么？</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    用解释能力反向检验理解深度。如果你能把一件事讲到一个完全不懂的人也能听明白，说明你的理解已经从"感觉上知道"进入了"结构化掌握"。
+  </div>
+</div>
+
+<!-- 6: Method 2 intro -->
+<div class="slide">
+  <div class="slide-number">03 / 04</div>
+  <div class="section-tag">方法二</div>
+  <h2><span class="accent2">反方辩论模式</span>：检验观点是否站得住</h2>
+  <p class="subtitle" style="margin-top: 10px;">让 AI 站在你的对立面，与你进行辩论。比如豆包的辩论模式——我承认每天早上都会被气到，但确实有效。</p>
+  <div class="quote" style="margin-top: 12px;">
+    请你扮演我的反方辩手。不要急着认同我，而是专门挑战我的观点。请你指出我的假设、漏洞、反例、边界条件和可能失败的地方。
+  </div>
+</div>
+
+<!-- 7: AI challenges in method 2 -->
+<div class="slide">
+  <div class="slide-number">04 / 04</div>
+  <div class="section-tag">挑战</div>
+  <h2>AI 可能会这样挑战你：</h2>
+  <div style="margin-top: 14px;">
+    <div class="list-item">你的核心假设是什么？有没有相反证据？</div>
+    <div class="list-item">你的结论是否过度推导？</div>
+    <div class="list-item">这个方案在什么条件下会失败？</div>
+    <div class="list-item">你是否低估了执行成本？</div>
+    <div class="list-item">有没有可能只是局部经验，不是普遍规律？</div>
+    <div class="list-item">如果站在客户、员工、竞争对手或投资人的角度，会怎么看？</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    用反驳能力反向检验观点强度。AI 不一定比你更懂这件事，但它可以持续、稳定、不疲惫地扮演反对者。让你的观点在真正进入现实之前，先经历一轮认知压力测试。
+  </div>
+</div>
+
+<!-- ==================== 叁：AI 是认知对练工具 ==================== -->
+
+<!-- Chapter 3 -->
+<div class="slide chapter">
+  <div class="chapter-num">第三章</div>
+  <h1>AI 是<span class="accent">认知对练</span>工具</h1>
+  <p class="chapter-desc">AI 最重要的价值不是"帮你想"，而是"陪你练"。</p>
+</div>
+
+<!-- 9: Role table -->
+<div class="slide">
+  <div class="slide-number">01 / 02</div>
+  <div class="section-tag">角色</div>
+  <h2>关键不在于"问 AI"，而在于<span class="accent">设定认知场景</span></h2>
+  <div class="table-container" style="margin-top: 14px;">
+    <table>
+      <thead><tr><th>AI 扮演的角色</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td>小白</td><td>逼你把复杂问题讲清楚</td></tr>
+        <tr><td>反方辩手</td><td>挑战你的观点和假设</td></tr>
+        <tr><td>面试官</td><td>检验你的表达和应变</td></tr>
+        <tr><td>咨询顾问</td><td>帮你拆解问题结构</td></tr>
+        <tr><td>产品经理</td><td>帮你定义需求和用户场景</td></tr>
+        <tr><td>技术评审</td><td>挑战你的技术方案</td></tr>
+        <tr><td>客户</td><td>检验你的方案是否真正解决问题</td></tr>
+        <tr><td>投资人</td><td>追问商业模式、成本和增长逻辑</td></tr>
+        <tr><td>复盘教练</td><td>帮你总结成功和失败原因</td></tr>
+        <tr><td>编辑</td><td>帮你优化表达和结构</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 10: AI is not answer machine -->
+<div class="slide">
+  <div class="slide-number">02 / 02</div>
+  <div class="section-tag">重新定义</div>
+  <h2>这时 AI 不再是答案机器<br>而是<span class="accent">六种认知工具</span></h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3>追问器</h3><p>逼你把概念、逻辑和边界讲清楚</p></div>
+    <div class="card"><h3>反驳器</h3><p>持续挑战你的假设和结论</p></div>
+    <div class="card"><h3>复盘器</h3><p>帮你总结成功和失败原因</p></div>
+    <div class="card"><h3>结构化器</h3><p>帮你把模糊经验变成清晰框架</p></div>
+    <div class="card"><h3>压力测试器</h3><p>让你的观点在现实前经历一轮检验</p></div>
+    <div class="card"><h3>方法论萃取器</h3><p>帮你把个人能力沉淀为可复用方法</p></div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    它的作用不是替代你的思考，而是把你的思考逼到更清楚、更具体、更可验证的程度。
+  </div>
+</div>
+
+<!-- ==================== 肆：从经验到方法论到工具 ==================== -->
+
+<!-- Chapter 4 -->
+<div class="slide chapter">
+  <div class="chapter-num">第四章</div>
+  <h1>从经验到<span class="accent">方法论</span><br>从方法论到<span class="accent2">工具</span></h1>
+  <p class="chapter-desc">AI 不只是执行人的意图，它还在帮助人把意图背后的判断体系沉淀下来。</p>
+</div>
+
+<!-- 12: What you tell AI -->
+<div class="slide">
+  <div class="slide-number">01 / 03</div>
+  <div class="section-tag">结构化</div>
+  <h2>当你让 AI 替你做一件事时<br>你实际上需要告诉它<span class="accent">很多事</span></h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3>目标与输入</h3><p>目标是什么？输入是什么？输出应该长什么样？</p></div>
+    <div class="card"><h3>判断标准</h3><p>判断标准是什么？哪些情况需要继续？哪些情况必须停止？</p></div>
+    <div class="card"><h3>步骤拆解</h3><p>步骤应该如何拆？哪些信息是背景？哪些规则必须遵守？</p></div>
+    <div class="card"><h3>异常处理</h3><p>哪些异常需要处理？哪些问题必须交还给人判断？</p></div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    这个过程，就是把人的经验变成方法论，再把方法论变成 workflow、skill、prompt、SOP、agent 或 tool chain。
+  </div>
+</div>
+
+<!-- 13: From tacit to explicit -->
+<div class="slide">
+  <div class="slide-number">02 / 03</div>
+  <div class="section-tag">被迫结构化</div>
+  <h2>当你要让 AI 执行、复用和扩展这些能力时<br>你就必须把它们<span class="accent">说清楚</span></h2>
+  <div class="two-col" style="margin-top: 14px;">
+    <div>
+      <h3 class="tag-noun">模糊的经验</h3>
+      <p class="subtitle">我大概知道该怎么做；我凭感觉能判断；我做久了就知道哪里有问题；我一看这个客户就知道风险在哪里。</p>
+    </div>
+    <div>
+      <h3 style="color: var(--accent);">被迫结构化</h3>
+      <p class="subtitle">模糊的经验被迫结构化。隐性的判断被迫显性化。个人能力被逐渐转化为可复制的知识资产。</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    当你试图让 AI 执行一件事时，你其实是在把自己的经验翻译成可复用的流程。
+  </div>
+</div>
+
+<!-- 14: AI execution -->
+<div class="slide">
+  <div class="slide-number">03 / 03</div>
+  <div class="section-tag">执行类应用</div>
+  <h2>Codex、Claude Code 等 AI 执行类应用<br>表面在帮人<span class="accent">完成任务</span>，背后在转化<span class="accent2">人的知识</span></h2>
+  <div class="flywheel" style="margin-top: 14px;">
+    <div class="node">写代码</div><span class="arrow">→</span>
+    <div class="node">操作网页</div><span class="arrow">→</span>
+    <div class="node">整理资料</div><span class="arrow">→</span>
+    <div class="node">生成文档</div><span class="arrow">→</span>
+    <div class="node">自动化流程</div><span class="arrow">→</span>
+    <div class="node">构建工具</div><span class="arrow">→</span>
+    <div class="node">沉淀工作流</div>
+  </div>
+  <p class="subtitle" style="margin-top: 12px;">当你让 AI 替你完成这些事时，你同时在完成一件更重要的事：把自己的隐性知识转化为可执行的结构。</p>
+</div>
+
+<!-- ==================== 伍：从个人能力到组织能力 ==================== -->
+
+<!-- Chapter 5 -->
+<div class="slide chapter">
+  <div class="chapter-num">第五章</div>
+  <h1>从<span class="accent">个人能力</span><br>到<span class="accent2">组织能力</span></h1>
+  <p class="chapter-desc">一个组织里最宝贵的东西，往往不是写在制度里的，而是散落在不同人脑子里的隐性经验。</p>
+</div>
+
+<!-- 16: Tacit knowledge in org -->
+<div class="slide">
+  <div class="slide-number">01 / 02</div>
+  <div class="section-tag">隐性经验</div>
+  <h2>组织里最宝贵的知识通常<span class="accent">不在文档里</span></h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3>销售</h3><p>知道哪些客户是真需求</p></div>
+    <div class="card"><h3>项目经理</h3><p>知道哪些节点最容易失控</p></div>
+    <div class="card"><h3>技术负责人</h3><p>知道哪些方案后期维护成本高</p></div>
+    <div class="card"><h3>生产负责人</h3><p>知道哪些异常看起来小但后果很大</p></div>
+    <div class="card"><h3>客服</h3><p>知道用户真正抱怨的不是表面问题</p></div>
+    <div class="card"><h3>老员工</h3><p>知道很多流程为什么不能随便改</p></div>
+  </div>
+  <p class="subtitle" style="margin-top: 12px;">这些知识很宝贵，但通常很难沉淀。因为它们不是标准知识，而是经验、判断、直觉、教训和场景感。</p>
+</div>
+
+<!-- 17: AI extracts organizational knowledge -->
+<div class="slide">
+  <div class="slide-number">02 / 02</div>
+  <div class="section-tag">沉淀</div>
+  <h2>AI 可以帮助组织把这些隐性经验<br>提取出来变成<span class="accent">可复用的资产</span></h2>
+  <div class="flywheel" style="margin-top: 14px;">
+    <div class="node">SOP</div><span class="arrow">+</span>
+    <div class="node">检查清单</div><span class="arrow">+</span>
+    <div class="node">决策模型</div><span class="arrow">+</span>
+    <div class="node">风险清单</div><span class="arrow">+</span>
+    <div class="node">培训材料</div><span class="arrow">+</span>
+    <div class="node">工作流</div><span class="arrow">+</span>
+    <div class="node">知识库</div><span class="arrow">+</span>
+    <div class="node">Agent</div><span class="arrow">+</span>
+    <div class="node">内部工具</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    企业真正的能力，不只是某个厉害的人"会做"，而是组织能不能把这种能力沉淀下来、复用起来、传承下去、持续优化。
+  </div>
+  <div style="margin-top: 8px;">
+    <div class="list-item">个人经验 → 团队方法</div>
+    <div class="list-item">团队方法 → 组织流程</div>
+    <div class="list-item">组织流程 → 可执行工具</div>
+    <div class="list-item">持续反馈 → 工具不断优化</div>
+  </div>
+</div>
+
+<!-- ==================== 陆：AI 是人类隐性知识的助产师 ==================== -->
+
+<!-- Chapter 6 -->
+<div class="slide chapter">
+  <div class="chapter-num">第六章</div>
+  <h1>AI 是人类隐性知识的<br><span class="accent">助产师</span></h1>
+  <p class="chapter-desc">苏格拉底说自己是思想的助产士，因为他通过提问，帮助人把自己的思想生出来。</p>
+</div>
+
+<!-- 19: What AI delivers -->
+<div class="slide">
+  <div class="slide-number">01 / 02</div>
+  <div class="section-tag">接生</div>
+  <h2>这些东西并不是 AI 凭空创造的<br>它们原本就在我们身上，只是<span class="accent">没有形成清晰的语言和结构</span></h2>
+  <div class="flywheel" style="margin-top: 14px;">
+    <div class="node">经验</div><span class="arrow">+</span>
+    <div class="node">判断</div><span class="arrow">+</span>
+    <div class="node">直觉</div><span class="arrow">+</span>
+    <div class="node">偏好</div><span class="arrow">+</span>
+    <div class="node">方法</div><span class="arrow">+</span>
+    <div class="node">框架</div><span class="arrow">+</span>
+    <div class="node">原则</div><span class="arrow">+</span>
+    <div class="node">决策模型</div><span class="arrow">+</span>
+    <div class="node">表达方式</div><span class="arrow">+</span>
+    <div class="node">行动流程</div>
+  </div>
+  <p class="subtitle" style="margin-top: 12px;">AI 的作用，是帮助它们"接生"出来。</p>
+</div>
+
+<!-- 20: How AI delivers -->
+<div class="slide">
+  <div class="slide-number">02 / 02</div>
+  <div class="section-tag">过程</div>
+  <h2>AI 如何帮助我们完成"接生"？</h2>
+  <div style="margin-top: 14px;">
+    <div class="list-item">通过<span style="color: var(--text);">追问</span>让你讲清楚</div>
+    <div class="list-item">通过<span style="color: var(--text);">反驳</span>让你想严密</div>
+    <div class="list-item">通过<span style="color: var(--text);">归纳</span>让你看见结构</div>
+    <div class="list-item">通过<span style="color: var(--text);">生成</span>让你形成内容</div>
+    <div class="list-item">通过<span style="color: var(--text);">执行</span>让你把方法转化为工具</div>
+    <div class="list-item">通过<span style="color: var(--text);">复盘</span>让你把一次经验变成下一次能力</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    AI 时代的学习，不只是"人向 AI 学习"，也不是简单地"AI 替人工作"。更准确地说，是：人通过 AI 重新理解自己。
+  </div>
+</div>
+
+<!-- ==================== 柒：从个人认知到企业护城河 ==================== -->
+
+<!-- Chapter 7 -->
+<div class="slide chapter">
+  <div class="chapter-num">第七章</div>
+  <h1>从个人认知<br>到<span class="accent">企业护城河</span></h1>
+  <p class="chapter-desc">AI 对企业最大的影响，不只是提升某个岗位的效率，而是改变企业能力沉淀的方式。</p>
+</div>
+
+<!-- 22: Past vs present enterprise -->
+<div class="slide">
+  <div class="slide-number">01 / 03</div>
+  <div class="section-tag">静态 vs 动态</div>
+  <h2>过去企业的护城河来自<span class="accent2">存量资产</span><br>但在 AI 时代，很多静态资产的壁垒正在<span class="accent">变弱</span></h2>
+  <div class="flywheel" style="margin-top: 14px;">
+    <div class="node tag-noun">知识被压缩</div><span class="arrow">+</span>
+    <div class="node tag-noun">经验被模型化</div><span class="arrow">+</span>
+    <div class="node tag-noun">流程被复制</div><span class="arrow">+</span>
+    <div class="node tag-noun">内容被生成</div><span class="arrow">+</span>
+    <div class="node tag-noun">方案被模仿</div><span class="arrow">+</span>
+    <div class="node tag-noun">工具变便宜</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    AI 时代，企业护城河不再主要来自"存量资产"，而来自"持续行为"。
+  </div>
+</div>
+
+<!-- 23: Moat is continuous behavior -->
+<div class="slide">
+  <div class="slide-number">02 / 03</div>
+  <div class="section-tag">持续行为</div>
+  <h2>客户不是护城河。<br><span class="accent">持续理解客户</span>，才是护城河。</h2>
+  <div style="margin-top: 14px;">
+    <div class="list-item">数据不是护城河。<span style="color: var(--text);">持续产生高质量反馈数据</span>，才是护城河。</div>
+    <div class="list-item">流程不是护城河。<span style="color: var(--text);">持续重构流程</span>，才是护城河。</div>
+    <div class="list-item">经验不是护城河。<span style="color: var(--text);">持续把经验沉淀为组织能力</span>，才是护城河。</div>
+    <div class="list-item">产品不是护城河。<span style="color: var(--text);">持续根据真实反馈迭代产品</span>，才是护城河。</div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    AI 在这里扮演的角色，就是把持续行为系统化。它帮助企业把一线反馈、员工经验、客户需求、项目复盘、生产数据、销售线索和管理判断，持续沉淀为知识、流程、工具和模型。
+  </div>
+</div>
+
+<!-- 24: Connection to learning cycle -->
+<div class="slide">
+  <div class="slide-number">03 / 03</div>
+  <div class="section-tag">学习路径</div>
+  <h2>过去是<span class="accent2">向知识学习</span><br>现在是<span class="accent">通过 AI 向自己学习</span></h2>
+  <div class="two-col" style="margin-top: 14px;">
+    <div>
+      <h3 class="tag-noun">过去：向知识学习</h3>
+      <p class="subtitle">书本、课程、专家、资料、案例。把外部知识吸收进来，再逐渐变成自己的能力。</p>
+    </div>
+    <div>
+      <h3 style="color: var(--accent);">现在：通过 AI 向自己学习</h3>
+      <p class="subtitle">先提取隐性经验，再通过 AI 追问结构化，然后引入外部知识校正，最后沉淀为方法和工作流。</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    未来真正重要的能力，不只是会不会问 AI，而是：能不能通过 AI 把自己的知识系统建起来。
+  </div>
+</div>
+
+<!-- ==================== 捌：对日化行业的启发与结语 ==================== -->
+
+<!-- Chapter 8 -->
+<div class="slide chapter">
+  <div class="chapter-num">第八章</div>
+  <h1>对日化行业的<span class="accent">启发</span><br>与<span class="accent2">结语</span></h1>
+  <p class="chapter-desc">放到具体行业里，这个变化会更清晰。</p>
+</div>
+
+<!-- 26: Daily chemical past vs present -->
+<div class="slide">
+  <div class="slide-number">01 / 03</div>
+  <div class="section-tag">日化行业</div>
+  <h2>日化行业过去的护城河理解<br>在 AI 时代越来越<span class="accent">不够</span></h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3 class="tag-noun">成熟配方</h3><p>会被跟进</p></div>
+    <div class="card"><h3 class="tag-noun">稳定产线</h3><p>同行也会建</p></div>
+    <div class="card"><h3 class="tag-noun">爆品方法论</h3><p>会被同行拆解</p></div>
+    <div class="card"><h3 class="tag-noun">渠道打法</h3><p>会被复制</p></div>
+    <div class="card"><h3 class="tag-noun">内容脚本</h3><p>会被学习</p></div>
+    <div class="card"><h3 class="tag-noun">品牌认知</h3><p>需要持续兑现</p></div>
+  </div>
+  <p class="subtitle" style="margin-top: 12px;">一个爆款身体乳、洗发水、精华、面膜，一旦被市场验证，很快就会出现大量相似产品。</p>
+</div>
+
+<!-- 27: Daily chemical dynamic moat -->
+<div class="slide">
+  <div class="slide-number">02 / 03</div>
+  <div class="section-tag">动态护城河</div>
+  <h2>对日化企业来说，真正难复制的不是一时的产品<br>而是<span class="accent">持续完成几件事的能力</span></h2>
+  <div class="two-col" style="margin-top: 14px;">
+    <div>
+      <h3 style="color: var(--accent);">代工企业</h3>
+      <p class="subtitle">谁能更快把一个市场趋势变成可生产、可备案、可验证、可交付的产品。</p>
+    </div>
+    <div>
+      <h3 style="color: var(--accent);">自有品牌</h3>
+      <p class="subtitle">谁能持续理解消费者，并把消费者反馈转化为产品迭代、内容迭代和复购能力。</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    爆品会被复制，持续制造爆品的系统不会那么容易被复制。
+  </div>
+  <p class="subtitle" style="margin-top: 10px;">它不是一个静态配方库，而是一套持续运转的反馈系统：</p>
+  <div class="flywheel" style="margin-top: 8px;">
+    <div class="node">消费者洞察</div><span class="arrow">→</span>
+    <div class="node">产品定义</div><span class="arrow">→</span>
+    <div class="node">配方打样</div><span class="arrow">→</span>
+    <div class="node">测试验证</div><span class="arrow">→</span>
+    <div class="node">渠道销售</div><span class="arrow">→</span>
+    <div class="node">用户反馈</div><span class="arrow">→</span>
+    <div class="node">产品迭代</div><span class="arrow">→</span>
+    <div class="node">复购与新品</div>
+  </div>
+</div>
+
+<!-- 28: Conclusion -->
+<div class="slide">
+  <div class="slide-number">03 / 03</div>
+  <div class="section-tag">结语</div>
+  <h2>AI 不只是工具——<br>它是<span class="accent">人、团队和企业的能力进化工具</span></h2>
+  <div class="card-grid" style="margin-top: 14px;">
+    <div class="card"><h3>对个人</h3><p>认知对练工具。通过追问、反驳、复盘和结构化，看见自己的经验、判断和方法。</p></div>
+    <div class="card"><h3>对团队</h3><p>知识沉淀工具。把个人经验变成 SOP、workflow、prompt、agent 和工具链。</p></div>
+    <div class="card" style="grid-column: span 2;"><h3>对企业</h3><p>能力进化工具。把持续行为沉淀成系统能力，让护城河从存量资产转向持续行为。</p></div>
+  </div>
+  <div class="quote" style="margin-top: 14px;">
+    未来真正重要的不是简单地"会不会用 AI"，而是：能不能通过 AI 把个人经验变成方法论，把团队方法变成工作流，把企业行为变成持续进化的系统。
+  </div>
+</div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevSlide()">← 上一页</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="slide-counter" id="slideCounter"></span>
+  <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 →</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+
+slides[0].classList.add('active');
+
+function updateSlide(direction) {
+  slides[current].classList.remove('active');
+  if (direction === 'right') slides[current].classList.add('enter-right');
+  else slides[current].classList.add('enter-left');
+  setTimeout(() => {
+    slides[current].classList.remove('enter-right', 'enter-left');
+  }, 500);
+}
+
+function showSlide(index) {
+  if (index < 0 || index >= slides.length) return;
+  const dir = index > current ? 'right' : 'left';
+  current = index;
+  slides[current].classList.add('active');
+  slides[current].classList.add(dir === 'right' ? 'enter-right' : 'enter-left');
+  setTimeout(() => slides[current].classList.remove('enter-right', 'enter-left'), 500);
+  updateUI();
+}
+
+function prevSlide() { if (current > 0) showSlide(current - 1); }
+function nextSlide() { if (current < slides.length - 1) showSlide(current + 1); }
+
+function updateUI() {
+  document.getElementById('progressFill').style.width = ((current + 1) / slides.length * 100) + '%';
+  document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + slides.length;
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === slides.length - 1;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+});
+
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+
+updateUI();
+</script>
+
+</body>
+</html>

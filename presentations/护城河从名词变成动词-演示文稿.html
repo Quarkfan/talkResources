@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>护城河正在从名词变成动词</title>
+<style>
+  :root {
+    --bg: #0c0a09; --bg-light: #1c1917;
+    --accent: #f59e0b; --accent2: #ef4444; --accent3: #8b5cf6;
+    --text: #fafaf9; --text-dim: #a8a29e; --text-muted: #78716c;
+    --card: rgba(245, 158, 11, 0.06); --border: rgba(245, 158, 11, 0.15);
+    --success: #22c55e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; width: 100vw;
+    user-select: none; word-break: normal; overflow-wrap: break-word; line-break: normal;
+  }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(245,158,11,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(140px); opacity: 0.08; pointer-events: none; z-index: 0; animation: orbFloat 30s ease-in-out infinite; }
+  .orb-1 { width: 700px; height: 700px; background: var(--accent); top: -20%; left: -15%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -20%; right: -15%; animation-delay: -10s; }
+  .orb-3 { width: 400px; height: 400px; background: var(--accent3); top: 30%; left: 50%; animation-delay: -20s; }
+  @keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(60px,-40px) scale(1.1);} 66%{transform:translate(-40px,60px) scale(0.9);} }
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+  .slide { display: none; width: 100%; height: 100%; padding: 60px 80px; position: absolute; top: 0; left: 0; flex-direction: column; justify-content: center; }
+  .slide.active { display: flex; }
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  @keyframes enterRight { from{opacity:0;transform:translateX(60px);} to{opacity:1;transform:translateX(0);} }
+  @keyframes enterLeft { from{opacity:0;transform:translateX(-60px);} to{opacity:1;transform:translateX(0);} }
+  .slide-number { position: absolute; top: 24px; right: 36px; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .section-tag { display: inline-block; font-size: 0.75rem; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; }
+  .slide h2 { font-size: 2rem; font-weight: 700; line-height: 1.3; margin-bottom: 24px; max-width: 900px; }
+  .slide h3 { font-size: 1.3rem; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+  .subtitle { font-size: 1.05rem; color: var(--text-dim); line-height: 1.7; max-width: 800px; text-wrap: pretty; }
+  .quote { font-size: 1.1rem; font-weight: 600; line-height: 1.6; color: var(--accent); padding-left: 24px; border-left: 3px solid var(--accent); margin: 20px 0; max-width: 800px; }
+  .highlight-text { font-size: 1.8rem; font-weight: 700; line-height: 1.5; text-align: center; max-width: 800px; margin: 0 auto; }
+  .list-item { font-size: 1rem; color: var(--text-dim); line-height: 1.8; padding: 6px 0; padding-left: 20px; position: relative; }
+  .list-item::before { content: "\B7"; position: absolute; left: 0; color: var(--accent); font-weight: bold; font-size: 1.4rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 20px; }
+  .card { background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h3 { font-size: 1rem; margin-bottom: 8px; }
+  .card p { font-size: 0.88rem; color: var(--text-dim); line-height: 1.6; text-wrap: pretty; }
+  .flywheel { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 20px 0; font-size: 0.9rem; font-weight: 600; }
+  .flywheel .node { padding: 8px 14px; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text); }
+  .flywheel .arrow { color: var(--accent); font-size: 1.1rem; }
+  .table-container { margin-top: 20px; }
+  .table-container table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .table-container th { text-align: left; padding: 12px 16px; font-weight: 600; color: var(--accent); border-bottom: 2px solid var(--border); font-size: 0.85rem; }
+  .table-container td { padding: 12px 16px; border-bottom: 1px solid rgba(245,158,11,0.06); color: var(--text-dim); }
+  .table-container tr:hover td { color: var(--text); background: var(--card); }
+  .two-col { display: flex; gap: 40px; margin-top: 20px; }
+  .two-col > div { flex: 1; }
+  .two-col h3 { font-size: 1rem; margin-bottom: 12px; }
+  .old { color: var(--text-muted); }
+  .big-number { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--bg); font-weight: 700; font-size: 0.85rem; margin-right: 10px; flex-shrink: 0; }
+  .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; background: linear-gradient(transparent, rgba(0,0,0,0.6)); }
+  .nav-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .progress-bar { flex: 1; margin: 0 16px; height: 3px; background: var(--bg-light); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .slide-counter { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+  .key-hint { position: fixed; bottom: 56px; right: 24px; font-size: 0.7rem; color: var(--text-muted); z-index: 100; }
+  .key-hint kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-light); font-family: inherit; }
+  @media (max-width: 768px) { .slide { padding: 40px 30px; } .slide h2 { font-size: 1.4rem; } .card-grid { grid-template-columns: 1fr; } .two-col { flex-direction: column; gap: 20px; } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="slide-container" id="slides">
+
+<!-- 00: Title -->
+<div class="slide active">
+  <div class="slide-number">00 / 22</div>
+  <div style="text-align:center;max-width:800px;margin:0 auto;">
+    <div class="section-tag">战略观察</div>
+    <h1 style="font-size:3.2rem;font-weight:800;margin-top:20px;line-height:1.2;">护城河正在从<br><span style="color:var(--accent)">名词</span>变成<span style="color:var(--accent2)">动词</span></h1>
+    <p class="subtitle" style="margin:20px auto 0;font-size:1.1rem;text-align:center;">AI 时代，企业真正的壁垒不是"拥有什么"，而是"持续做什么"</p>
+  </div>
+</div>
+
+<!-- 01: Core Thesis -->
+<div class="slide">
+  <div class="slide-number">01 / 22</div>
+  <div class="section-tag">核心判断</div>
+  <h2>过去的问题是：<span style="color:var(--accent)">你有什么？</span></h2>
+  <p class="subtitle">品牌、渠道、专利、数据、技术、牌照、供应链、客户关系、规模优势——<br>这些"名词"构成了传统护城河。</p>
+  <h2 style="margin-top:32px;">现在的问题是：<span style="color:var(--accent2)">你还在持续做什么？</span></h2>
+  <div class="quote" style="margin-top:32px;">AI 时代，企业护城河不再主要来自"存量资产"，而来自"持续行为"。</div>
+</div>
+
+<!-- 02: Why -->
+<div class="slide">
+  <div class="slide-number">02 / 22</div>
+  <div class="section-tag">为什么</div>
+  <h2>AI 正在系统性降低<span style="color:var(--accent)">复制成本</span></h2>
+  <p class="subtitle">知识、代码、内容、方案和流程——过去需要很多人、很多年积累的东西，今天可能被模型快速压缩、总结、迁移和再生成。</p>
+  <div class="card-grid" style="margin-top:32px;">
+    <div class="card"><h3>文档化</h3><p>经验、流程、SOP → 被模型学习</p></div>
+    <div class="card"><h3>标准化</h3><p>代码、方案、设计 → 被工具生成</p></div>
+    <div class="card"><h3>模板化</h3><p>文案、报告、话术 → 被 Agent 执行</p></div>
+    <div class="card"><h3>抽象化</h3><p>行业知识 → 被开源生态吸收</p></div>
+  </div>
+</div>
+
+<!-- 03: Asset Decay -->
+<div class="slide">
+  <div class="slide-number">03 / 22</div>
+  <div class="section-tag">现象</div>
+  <h2>存量资产的<span style="color:var(--accent2)">半衰期</span>正在变短</h2>
+  <div style="margin-top:24px;">
+    <div class="list-item">数据如果不持续更新，会<span style="color:var(--accent2)">老化</span></div>
+    <div class="list-item">技术如果不持续工程化，会<span style="color:var(--accent2)">失效</span></div>
+    <div class="list-item">客户如果不持续理解，会<span style="color:var(--accent2)">流失</span></div>
+    <div class="list-item">品牌如果不持续兑现，会<span style="color:var(--accent2)">空心化</span></div>
+    <div class="list-item">组织如果不持续学习，会<span style="color:var(--accent2)">迟钝</span></div>
+    <div class="list-item">产品如果不持续进化，会被<span style="color:var(--accent2)">复制</span></div>
+  </div>
+  <div class="quote" style="margin-top:32px;">AI 时代不是资产失效了，而是资产必须进入循环。<br>静态资产的半衰期在变短，动态能力的重要性在上升。</div>
+</div>
+
+<!-- 04: From Noun to Verb -->
+<div class="slide">
+  <div class="slide-number">04 / 22</div>
+  <div class="section-tag">转变</div>
+  <h2>从"占有"到"运转"</h2>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>静态护城河（名词）</th><th>动态护城河（动词）</th></tr></thead>
+      <tbody>
+        <tr><td>你有什么数据？</td><td>你是否持续产生高质量数据？</td></tr>
+        <tr><td>你有什么技术？</td><td>你是否持续把技术转化为产品体验？</td></tr>
+        <tr><td>你有什么客户？</td><td>你是否持续理解客户的新问题？</td></tr>
+        <tr><td>你有什么流程？</td><td>你是否持续重构流程？</td></tr>
+        <tr><td>你有什么品牌？</td><td>你是否持续兑现信任？</td></tr>
+        <tr><td>你有什么人才？</td><td>你是否持续让人与 AI 协同进化？</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 05: What's Hard to Copy -->
+<div class="slide">
+  <div class="slide-number">05 / 22</div>
+  <div class="section-tag">对比</div>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--text-muted);">AI 容易复制的</h3>
+      <div class="list-item" style="color:var(--text-muted);">写代码、写方案</div>
+      <div class="list-item" style="color:var(--text-muted);">设计稿、分析报告</div>
+      <div class="list-item" style="color:var(--text-muted);">市场文案、客服话术</div>
+      <div class="list-item" style="color:var(--text-muted);">标准业务流程</div>
+      <div class="list-item" style="color:var(--text-muted);">部分行业专家经验</div>
+    </div>
+    <div>
+      <h3 style="color:var(--success);">AI 难以替代的</h3>
+      <div class="list-item" style="color:var(--success);">持续进入真实现场</div>
+      <div class="list-item" style="color:var(--success);">持续获得一手反馈</div>
+      <div class="list-item" style="color:var(--success);">持续做组织决策</div>
+      <div class="list-item" style="color:var(--success);">持续承受复杂约束</div>
+      <div class="list-item" style="color:var(--success);">持续建立信任关系</div>
+      <div class="list-item" style="color:var(--success);">持续把模糊问题定义清楚</div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:24px;">护城河从"存量壁垒"转向"循环壁垒"。不是"我们有很多客户数据"，而是"我们每天从客户现场获得反馈，把反馈转成产品改进，再把改进部署回现场"。</div>
+</div>
+
+<!-- 06: Feedback Loop -->
+<div class="slide">
+  <div class="slide-number">06 / 22</div>
+  <div class="section-tag">本质</div>
+  <h2>AI 时代的护城河，本质上是<span style="color:var(--accent)">反馈循环</span></h2>
+  <div class="flywheel">
+    <div class="node">进入真实场景</div><span class="arrow">→</span>
+    <div class="node">发现真实问题</div><span class="arrow">→</span>
+    <div class="node">提供解决方案</div><span class="arrow">→</span>
+    <div class="node">获得使用反馈</div><span class="arrow">→</span>
+    <div class="node">修正产品和模型</div><span class="arrow">→</span>
+    <div class="node">再部署到场景</div><span class="arrow">→</span>
+    <div class="node">更多反馈</div>
+  </div>
+  <div class="card-grid" style="margin-top:24px;">
+    <div class="card"><h3>循环越快</h3><p>企业越容易进化</p></div>
+    <div class="card"><h3>循环越深</h3><p>企业越接近真实问题</p></div>
+    <div class="card"><h3>循环越准确</h3><p>企业越能把外部变化转化为内部能力</p></div>
+  </div>
+</div>
+
+<!-- 07: 6 Diagnostic Questions (NEW per plan) -->
+<div class="slide">
+  <div class="slide-number">07 / 22</div>
+  <div class="section-tag">自测</div>
+  <h2>你的反馈循环有<span style="color:var(--accent)">多快</span>？</h2>
+  <p class="subtitle" style="margin-bottom:20px;">AI 让"形成方案"的速度大幅提升。竞争焦点前移（谁更接近真实问题）和后移（谁更能落地并迭代）。</p>
+  <div style="margin-top:16px;">
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">早发现</span>问题？</div>
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">快理解</span>问题？</div>
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">快形成</span>方案？</div>
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">快部署</span>到现实环境？</div>
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">快收到</span>反馈？</div>
+    <div class="list-item">是否比别人更<span style="color:var(--accent)">快进入</span>下一轮迭代？</div>
+  </div>
+  <div class="quote" style="margin-top:20px;font-size:1rem;">护城河不是一个边界，而是一种持续挖掘边界的能力。</div>
+</div>
+
+<!-- 08: Data Mechanism -->
+<div class="slide">
+  <div class="slide-number">08 / 22</div>
+  <div class="section-tag">重新定义</div>
+  <h2>数据本身不是护城河<br><span style="color:var(--accent)">数据生成机制</span>才是护城河</h2>
+  <p class="subtitle" style="margin-bottom:16px;">真正的问题不是"有没有数据"，而是：</p>
+  <div class="card-grid">
+    <div class="card"><p>是否持续产生？是否来自真实场景？</p></div>
+    <div class="card"><p>是否包含反馈？是否能够被标注？</p></div>
+    <div class="card"><p>是否能够进入模型？是否能够回到业务系统？</p></div>
+    <div class="card"><p>是否能够让下一次交付变得更好？</p></div>
+  </div>
+  <div class="quote" style="margin-top:20px;">普通数据只描述发生了什么。反馈数据描述的是：系统做了什么、用户如何反应、结果是否有效、哪里失败、应该如何修正。</div>
+  <p class="subtitle" style="margin-top:12px;color:var(--success);">物联网、工业监测、运维系统、金融风控、医疗辅助、供应链优化——这些领域的专有数据如果能进入闭环，就是很强的壁垒。</p>
+</div>
+
+<!-- 09: Product as Training -->
+<div class="slide">
+  <div class="slide-number">09 / 22</div>
+  <div class="section-tag">新角色</div>
+  <h2>产品正在变成<span style="color:var(--accent)">训练基础设施</span></h2>
+  <div class="two-col" style="margin-top:20px;">
+    <div>
+      <h3>过去：产品 = 交付价值</h3>
+      <p class="subtitle">把功能做好，交付给客户使用。</p>
+    </div>
+    <div>
+      <h3>现在：产品 = 交付 + <span style="color:var(--accent)">生产学习信号</span></h3>
+      <p class="subtitle">每一次使用都产生训练样本和反馈信号。</p>
+    </div>
+  </div>
+  <div class="flywheel" style="margin-top:20px;">
+    <div class="node">产品使用</div><span class="arrow">→</span>
+    <div class="node">行为反馈</div><span class="arrow">→</span>
+    <div class="node">数据沉淀</div><span class="arrow">→</span>
+    <div class="node">模型改进</div><span class="arrow">→</span>
+    <div class="node">产品增强</div><span class="arrow">→</span>
+    <div class="node">更多使用</div>
+  </div>
+  <div class="quote" style="margin-top:16px;">模型公司会越来越产品化，产品公司会越来越模型化。边界正在模糊。</div>
+</div>
+
+<!-- 10: Five Verbs -->
+<div class="slide">
+  <div class="slide-number">10 / 22</div>
+  <div class="section-tag">五种形态</div>
+  <h2>动词型护城河的<span style="color:var(--accent)">具体形态</span></h2>
+  <div class="card-grid" style="margin-top:20px;">
+    <div class="card">
+      <h3><span class="big-number">1</span>持续理解客户</h3>
+      <p>客户名单不是护城河。持续理解变化才是。B2B、工业等复杂场景中，谁更接近现场谁更有优势。</p>
+    </div>
+    <div class="card">
+      <h3><span class="big-number">2</span>持续产生反馈数据</h3>
+      <p>关键不是数据存量，而是数据流动。持续制造、清洗、标注、验证、使用数据。</p>
+    </div>
+    <div class="card">
+      <h3><span class="big-number">3</span>持续工程化</h3>
+      <p>技术论文、算法模型、代码框架越来越容易被复制。真正困难的是：可用、可靠、可解释、可集成、可运维 + 持续改进。<br><span style="color:var(--accent);">护城河不在于"用了AI"，而在于"持续用AI改造自己"。</span></p>
+    </div>
+    <div class="card">
+      <h3><span class="big-number">4</span>持续重构流程</h3>
+      <p>AI 不是嵌入旧流程，而是重构流程。哪些环节可自动化？哪些客户交付可实时化？哪些产品可从工具变成代理？<br><span style="color:var(--text-muted);">表层收益：写文案、写代码、总结会议。更深收益：流程被AI重新设计。</span></p>
+    </div>
+    <div class="card" style="grid-column:span 2;">
+      <h3><span class="big-number">5</span>持续兑现信任</h3>
+      <p>AI 让内容过剩，也让噪音和不确定性增加。品牌不再只是知名度，而是持续履约能力——系统能否稳定运行、结果是否可解释、出错谁负责、是否能长期交付。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 11: Coding Agent Case Intro -->
+<div class="slide">
+  <div class="slide-number">11 / 22</div>
+  <div class="section-tag">案例</div>
+  <h2>Coding Agent：<span style="color:var(--accent)">高密度样本</span></h2>
+  <p class="subtitle">为什么 coding agent 是观察"护城河动词化"的最佳窗口？</p>
+  <div class="card-grid" style="margin-top:24px;">
+    <div class="card"><h3>任务复杂</h3><p>多步骤规划、文件理解、代码修改、测试调试</p></div>
+    <div class="card"><h3>过程可记录</h3><p>提示、变更、命令执行、错误日志、diff 都能记录</p></div>
+    <div class="card"><h3>结果可验证</h3><p>代码能否运行、测试是否通过、PR 是否被接受</p></div>
+    <div class="card"><h3>反馈密集</h3><p>用户会接受、拒绝、撤销、修改、追问</p></div>
+    <div class="card"><h3>商业价值高</h3><p>开发效率提升可直接转化为付费意愿</p></div>
+    <div class="card"><h3>迭代速度快</h3><p>模型改进可快速回到产品中验证</p></div>
+  </div>
+</div>
+
+<!-- 12: GitHub vs Agent -->
+<div class="slide">
+  <div class="slide-number">12 / 22</div>
+  <div class="section-tag">对比</div>
+  <h2>GitHub 是<span style="color:var(--text-muted)">答案集</span><br>Coding Agent 是<span style="color:var(--accent)">解题过程记录器</span></h2>
+  <div class="two-col" style="margin-top:28px;">
+    <div>
+      <h3 style="color:var(--text-muted);">公开代码数据</h3>
+      <p class="subtitle">只能告诉模型"最终代码长什么样"——这是结果。</p>
+    </div>
+    <div>
+      <h3 style="color:var(--accent);">真实使用过程</h3>
+      <p class="subtitle">告诉模型"代码是如何被一步步写出来、修正、验证和接受的"——这是过程。</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:28px;">对模型训练来说，过程往往比结果更重要。</div>
+</div>
+
+<!-- 13: Cursor -->
+<div class="slide">
+  <div class="slide-number">13 / 22</div>
+  <div class="section-tag">Cursor</div>
+  <h2>Cursor 的价值不只是 IDE<br>而是<span style="color:var(--accent)">训练场</span></h2>
+  <p class="subtitle">Composer 2 通过强化学习训练 coding agent，训练任务运行在尽量模拟真实 Cursor sessions 的环境中。</p>
+  <p class="subtitle" style="color:var(--text);font-weight:600;margin-top:24px;">Cursor 的护城河不是一个名词：</p>
+  <p class="subtitle" style="color:var(--text-muted);">IDE、模型、代码库、用户数——这些都不是。</p>
+  <div class="quote" style="margin-top:20px;">而是一个动词：<br>持续捕获开发过程，持续生成反馈信号，持续训练模型，持续改善产品。</div>
+</div>
+
+<!-- 14: SpaceX -->
+<div class="slide">
+  <div class="slide-number">14 / 22</div>
+  <div class="section-tag">战略信号</div>
+  <h2>SpaceX / xAI 与 Cursor 的合作说明了什么？</h2>
+  <p class="subtitle" style="color:var(--text-muted);">不应只理解为"大公司收购一个 AI 编程工具"。</p>
+  <div class="quote" style="margin-top:20px;">顶级 coding agent 产品已经不仅是应用层工具，而是模型公司争夺未来训练闭环的重要入口。</div>
+  <p class="subtitle" style="margin-top:16px;">API 日志能看到请求和响应，但很难完整看到用户是否采纳、代码是否运行、bug 如何出现、用户如何修正。原生 coding agent 产品可以更接近完整过程。</p>
+</div>
+
+<!-- 15: Industry Race -->
+<div class="slide">
+  <div class="slide-number">15 / 22</div>
+  <div class="section-tag">行业格局</div>
+  <h2>模型厂商正在主动进入<span style="color:var(--accent)">真实工作流</span></h2>
+  <div class="card-grid" style="margin-top:24px;">
+    <div class="card">
+      <h3>OpenAI → Codex</h3>
+      <p>扩展到真实工程任务，桌面 + 移动端，支持功能开发、代码库问答、bug 修复和 PR 建议。</p>
+    </div>
+    <div class="card">
+      <h3>xAI → Grok Build</h3>
+      <p>面向专业软件工程和复杂项目的 coding agent 与 CLI。</p>
+    </div>
+    <div class="card" style="grid-column:span 2;">
+      <h3>为什么？</h3>
+      <p>真实工作流入口不只是用户入口，也是反馈入口、训练入口和未来护城河入口。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 16: Every Industry -->
+<div class="slide">
+  <div class="slide-number">16 / 22</div>
+  <div class="section-tag">延伸</div>
+  <h2>未来每一个行业都可能出现自己的<span style="color:var(--accent)">Agent 飞轮</span></h2>
+  <div class="card-grid" style="margin-top:20px;">
+    <div class="card"><h3>编程</h3><p>代码是否被接受、测试是否通过、PR 是否合并</p></div>
+    <div class="card"><h3>工业运维</h3><p>告警是否真实、维修是否有效、设备是否恢复</p></div>
+    <div class="card"><h3>销售</h3><p>话术是否有效、客户是否回应、成交周期是否缩短</p></div>
+    <div class="card"><h3>供应链</h3><p>预测是否准确、交付是否准时、异常是否提前发现</p></div>
+    <div class="card" style="grid-column:span 2;"><h3>医疗</h3><p>辅助判断是否正确、医生是否采纳、患者结果是否改善</p></div>
+  </div>
+</div>
+
+<!-- 17: The Key Question -->
+<div class="slide">
+  <div class="slide-number">17 / 22</div>
+  <div class="section-tag">关键问题</div>
+  <div style="text-align:center;max-width:700px;margin:0 auto;">
+    <h2 style="color:var(--text-muted);">AI 时代真正的问题不是：</h2>
+    <div class="highlight-text" style="color:var(--text-muted);margin-bottom:28px;">"我们有没有 AI？"</div>
+    <h2>而是：</h2>
+    <div class="highlight-text" style="color:var(--accent);margin-top:12px;">"我们的业务有没有形成<br>AI 可以学习的<span style="color:var(--accent2)">闭环</span>？"</div>
+    <p class="subtitle" style="margin-top:24px;">这才是企业战略的关键。</p>
+  </div>
+</div>
+
+<!-- 18: Daily Chemical Intro -->
+<div class="slide">
+  <div class="slide-number">18 / 22</div>
+  <div class="section-tag">行业案例</div>
+  <h2>日化行业——从配方资产到<span style="color:var(--accent)">反馈飞轮</span></h2>
+  <p class="subtitle">日化行业是"护城河从存量资产转向持续行为"的典型样本。配方会被跟进，包装会被模仿，渠道打法会被复制，爆品方法论会被拆解。真正难以复制的是持续行为。</p>
+</div>
+
+<!-- 19: OEM Factory -->
+<div class="slide">
+  <div class="slide-number">19 / 22</div>
+  <div class="section-tag">代工企业</div>
+  <h2>代工厂的护城河不只是产能<br>而是<span style="color:var(--accent)">快速响应能力</span></h2>
+  <div class="card-grid" style="margin-top:20px;">
+    <div class="card"><h3>1. 持续捕捉市场趋势</h3><p>跟踪小红书、抖音、天猫平台趋势、成分热度、消费者差评、法规变化。从"生产供应商"变成"产品共创伙伴"。</p></div>
+    <div class="card"><h3>2. 持续提高打样效率</h3><p>核心不是配方从 0 到 1，而是从 60 分到 85 分的快速迭代。持续把每一次打样、失败、修改、测试沉淀成下一次更快成功的能力。</p></div>
+    <div class="card"><h3>3. 持续稳定质量</h3><p>小试能成、中试能成、量产仍然稳定。AI 可关联生产参数、质检结果、批次差异、客诉问题，形成质量预测和异常预警。</p></div>
+  </div>
+</div>
+
+<!-- 20: Brand Flywheel -->
+<div class="slide">
+  <div class="slide-number">20 / 22</div>
+  <div class="section-tag">自有品牌</div>
+  <h2>自有品牌的护城河不是爆品<br>而是<span style="color:var(--accent)">消费者反馈飞轮</span></h2>
+  <div class="two-col" style="margin-top:20px;">
+    <div>
+      <h3>从"看销量"到"看反馈"</h3>
+      <p class="subtitle">销量是滞后指标。持续分析评论高频词、差评原因、退货原因、复购间隔、使用场景、季节差异。反馈反过来指导配方微调、包装升级、内容迭代。</p>
+    </div>
+    <div>
+      <h3>从"品牌资产"到"持续信任"</h3>
+      <p class="subtitle">说温和，就要有真实使用反馈和测试支持。说控油，就要有可验证的人群效果。说敏感肌可用，就要谨慎、合规、可解释。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 21: L'Oreal -->
+<div class="slide">
+  <div class="slide-number">21 / 22</div>
+  <div class="section-tag">欧莱雅</div>
+  <h2>Beauty Tech：<span style="color:var(--accent)">消费者反馈入口</span></h2>
+  <p class="subtitle">欧莱雅发布的 Noli 使用超过 100 万个人脸扫描数据点和数千种产品配方分析，来解码用户美妆画像并推荐产品。</p>
+  <div class="flywheel" style="margin-top:20px;">
+    <div class="node">用户扫描</div><span class="arrow">→</span>
+    <div class="node">产品推荐</div><span class="arrow">→</span>
+    <div class="node">购买反馈</div><span class="arrow">→</span>
+    <div class="node">回流研发</div><span class="arrow">→</span>
+    <div class="node">配方改进</div><span class="arrow">→</span>
+    <div class="node">更准推荐</div>
+  </div>
+  <div class="quote" style="margin-top:16px;font-size:1rem;">不是说"我有一个品牌、我有一个配方"，而是说"我持续理解消费者，持续验证产品，持续改进配方，持续优化推荐，持续提升复购"。</div>
+</div>
+
+<!-- 22: Final -->
+<div class="slide">
+  <div class="slide-number">22 / 22</div>
+  <div style="text-align:center;max-width:760px;margin:0 auto;">
+    <div class="section-tag">结语</div>
+    <h1 style="font-size:2.6rem;margin-top:24px;line-height:1.3;">未来的护城河不是一堵<span style="color:var(--accent)">墙</span><br>而是一台仍在运转的<span style="color:var(--accent2)">发动机</span></h1>
+    <p class="subtitle" style="margin-top:20px;text-align:center;">墙会被绕过、被复制、被侵蚀。<br>发动机只要还在运转，就能持续生成新的边界。</p>
+    <div class="highlight-text" style="color:var(--accent);margin-top:28px;font-size:1.4rem;">持续把真实世界的反馈转化为产品、模型、流程和组织能力——这就是 AI 时代的新护城河。</div>
+  </div>
+</div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevSlide()">← 上一页</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="slide-counter" id="slideCounter">1 / 23</span>
+  <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 →</button>
+</div>
+<div class="key-hint">
+  <kbd>←</kbd> <kbd>→</kbd> 或 <kbd>Space</kbd> 翻页
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+function showSlide(index, dir) {
+  if (index < 0 || index >= slides.length) return;
+  slides[current].classList.remove('active', 'enter-left', 'enter-right');
+  current = index;
+  slides[current].classList.add('active');
+  slides[current].classList.add(dir === 'right' ? 'enter-right' : 'enter-left');
+  setTimeout(() => slides[current].classList.remove('enter-right', 'enter-left'), 500);
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === slides.length - 1;
+  document.getElementById('progressFill').style.width = ((current + 1) / slides.length * 100) + '%';
+  document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + slides.length;
+}
+function nextSlide() { showSlide(current + 1, 'right'); }
+function prevSlide() { showSlide(current - 1, 'left'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+showSlide(0, 'right');
+</script>
+</body>
+</html>

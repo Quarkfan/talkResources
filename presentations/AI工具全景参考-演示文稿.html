@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日化行业AI工具全景参考手册</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-light: #1e293b;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --accent3: #f472b6;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --card: rgba(56, 189, 248, 0.06);
+    --border: rgba(56, 189, 248, 0.15);
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  .grid-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+  }
+  @keyframes gridMove {
+    from { background-position: 0 0; }
+    to { background-position: 60px 60px; }
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.10;
+    pointer-events: none; z-index: 0;
+    animation: orbFloat 25s ease-in-out infinite;
+  }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -15%; left: -10%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -15%; right: -10%; animation-delay: -8s; }
+  .orb-3 { width: 350px; height: 350px; background: var(--accent3); top: 40%; left: 40%; animation-delay: -16s; }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(80px, -60px) scale(1.15); }
+    66% { transform: translate(-60px, 80px) scale(0.85); }
+  }
+
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    padding: 50px 70px;
+    position: absolute; top: 0; left: 0;
+    flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+  @keyframes enterRight {
+    from { opacity: 0; transform: translateX(60px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes enterLeft {
+    from { opacity: 0; transform: translateX(-60px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* === Typography === */
+  h1 {
+    font-size: 3.2rem; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 12px;
+  }
+  h2 {
+    font-size: 2.0rem; font-weight: 600; letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 8px;
+  }
+  h3 {
+    font-size: 1.3rem; font-weight: 600; color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .subtitle { font-size: 1.4rem; color: var(--text-dim); margin-bottom: 30px; }
+  .body-text { font-size: 1.1rem; color: var(--text-dim); line-height: 1.8; }
+  .tag {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 500;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--accent); margin-right: 6px; margin-bottom: 6px;
+  }
+  .tag.green { border-color: rgba(52,211,153,0.3); color: var(--success); }
+  .tag.yellow { border-color: rgba(251,191,36,0.3); color: var(--warning); }
+  .tag.pink { border-color: rgba(244,114,182,0.3); color: var(--accent3); }
+
+  /* === Score badge === */
+  .score-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; font-size: 1.1rem;
+    font-weight: 700; flex-shrink: 0;
+  }
+  .score-high { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+  .score-mid { background: rgba(251,191,36,0.15); color: var(--warning); border: 1px solid rgba(251,191,36,0.3); }
+
+  /* === Tool card === */
+  .tool-grid {
+    display: grid; gap: 16px; margin-top: 20px;
+  }
+  .tool-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .tool-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .tool-grid.cols-1 { grid-template-columns: 1fr; }
+
+  .tool-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .tool-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .tool-card .tool-name {
+    font-size: 1.15rem; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .tool-card .tool-company { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+  .tool-card .tool-desc { font-size: 0.92rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 8px; }
+  .tool-card .tool-scene { font-size: 0.82rem; color: var(--accent); line-height: 1.5; }
+  .tool-card .tool-bar {
+    display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap;
+  }
+
+  /* Score bars */
+  .score-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  }
+  .score-label { font-size: 0.78rem; color: var(--text-muted); width: 52px; flex-shrink: 0; }
+  .score-bar-bg {
+    flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+  }
+  .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .score-bar-fill.c-blue { background: var(--accent); }
+  .score-bar-fill.c-purple { background: var(--accent2); }
+  .score-bar-fill.c-pink { background: var(--accent3); }
+  .score-bar-fill.c-green { background: var(--success); }
+  .score-bar-fill.c-yellow { background: var(--warning); }
+  .score-val { font-size: 0.78rem; color: var(--text-dim); width: 24px; text-align: right; flex-shrink: 0; }
+
+  /* === Landing page === */
+  .landing-title {
+    font-size: 3.6rem; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; line-height: 1.2;
+  }
+  .landing-sub {
+    font-size: 1.3rem; color: var(--text-dim); margin-top: 16px; line-height: 1.6;
+  }
+  .landing-meta {
+    margin-top: 40px; display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .meta-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 24px; min-width: 140px;
+  }
+  .meta-box .num { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .meta-box .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* === Category nav dots === */
+  .cat-nav {
+    position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+    z-index: 100; display: flex; flex-direction: column; gap: 8px;
+  }
+  .cat-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-muted); cursor: pointer; transition: all 0.3s;
+    position: relative;
+  }
+  .cat-dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); transform: scale(1.3); }
+  .cat-dot:hover::after {
+    content: attr(data-label); position: absolute; right: 18px; top: -4px;
+    background: var(--bg-light); color: var(--text); padding: 3px 10px;
+    border-radius: 6px; font-size: 0.75rem; white-space: nowrap;
+    border: 1px solid var(--border);
+  }
+
+  /* === Progress bar === */
+  .progress-bar {
+    position: fixed; bottom: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    z-index: 100; transition: width 0.4s ease;
+  }
+
+  /* === Page indicator === */
+  .page-indicator {
+    position: fixed; bottom: 20px; right: 30px; z-index: 100;
+    font-size: 0.85rem; color: var(--text-muted);
+  }
+
+  /* === Keyboard hint === */
+  .key-hint {
+    position: fixed; bottom: 20px; left: 30px; z-index: 100;
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  .key-hint kbd {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    background: var(--bg-light); border: 1px solid var(--border);
+    font-size: 0.75rem; color: var(--text-dim);
+  }
+
+  /* === TOC list === */
+  .toc-list { list-style: none; margin-top: 20px; }
+  .toc-list li {
+    padding: 10px 16px; margin-bottom: 6px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: 1.05rem; color: var(--text-dim); cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 12px;
+  }
+  .toc-list li:hover { border-color: var(--accent); color: var(--text); }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(56,189,248,0.1); color: var(--accent);
+    font-size: 0.85rem; font-weight: 600; flex-shrink: 0;
+  }
+  .toc-count { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+
+  /* === Priority list === */
+  .priority-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .priority-rank {
+    font-size: 1rem; font-weight: 700; color: var(--accent);
+    width: 24px; text-align: center; flex-shrink: 0;
+  }
+  .priority-name { font-size: 1rem; font-weight: 500; color: var(--text); flex: 1; }
+  .priority-val { font-size: 0.85rem; color: var(--text-dim); }
+
+  /* === Divider === */
+  .section-divider {
+    width: 60px; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    margin: 12px 0 20px 0;
+  }
+
+  /* === Two-col layout === */
+  .two-col { display: flex; gap: 30px; margin-top: 16px; }
+  .two-col > div { flex: 1; }
+
+  /* === End card === */
+  .end-card {
+    text-align: center; padding: 60px;
+  }
+  .end-card h1 { font-size: 2.8rem; margin-bottom: 20px; }
+  .end-card p { font-size: 1.2rem; color: var(--text-dim); max-width: 600px; margin: 0 auto; line-height: 1.8; }
+
+  /* Highlight for score */
+  .score-num { font-size: 1.3rem; font-weight: 700; color: var(--success); }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="slide-container" id="slides">
+
+  <!-- ==================== SLIDE 0: Landing ==================== -->
+  <div class="slide active" data-cat="landing">
+    <div class="landing-title">日化行业 AI 工具<br>全景参考手册</div>
+    <div class="landing-sub">面向日化制造企业（OEM/ODM + 自有品牌），覆盖从市场洞察到供应链全链路。<br>同类工具取前五名，供现场交流参考。</div>
+    <div class="landing-meta">
+      <div class="meta-box"><div class="num">9</div><div class="label">工具类别</div></div>
+      <div class="meta-box"><div class="num">45</div><div class="label">精选工具 TOP5</div></div>
+      <div class="meta-box"><div class="num">0-10</div><div class="label">统一评分体系</div></div>
+      <div class="meta-box"><div class="num">2026.5</div><div class="label">数据截至</div></div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 1: TOC ==================== -->
+  <div class="slide" data-cat="toc">
+    <h2>目录</h2>
+    <div class="section-divider"></div>
+    <ul class="toc-list">
+      <li onclick="goSlide(2)"><span class="toc-num">1</span>桌面AI智能体/本地自动化<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(3)"><span class="toc-num">2</span>通用大模型<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(4)"><span class="toc-num">3</span>产品研发与配方创新<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(5)"><span class="toc-num">4</span>包装设计与视觉物料<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(6)"><span class="toc-num">5</span>内容营销与品牌传播<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(7)"><span class="toc-num">6</span>电商全渠道运营<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(8)"><span class="toc-num">7</span>私域运营与客户关系<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(9)"><span class="toc-num">8</span>供应链与生产协同<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(10)"><span class="toc-num">9</span>内部管理与合规风控<span class="toc-count">5 工具</span></li>
+      <li onclick="goSlide(11)"><span class="toc-num">10</span>快速决策指南<span class="toc-count">落地优先级</span></li>
+    </ul>
+  </div>
+
+  <!-- ==================== SLIDE 2: 桌面AI ==================== -->
+  <div class="slide" data-cat="desktop">
+    <h2>一、桌面AI智能体 / 本地自动化</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">Qoder Work <span class="tool-company">阿里云</span></div>
+        <div class="tool-desc">本地执行不上云，直接操作所有文件格式，打通钉钉/微信/飞书，自定义自动化工作流。配方数据绝对安全。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.2</span><span class="tag">本地优先</span><span class="tag">全场景自动化</span>
+        </div>
+        <div class="tool-scene">最佳：办公自动化、配方文档管理、竞品调研、批量处理发票合同</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">扣子 Coze <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">工作流可视化、多工具串联能力强，免费版功能丰富。适合搭建自动化业务流程。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.3</span><span class="tag">工作流引擎</span><span class="tag">云端执行</span>
+        </div>
+        <div class="tool-scene">最佳：内容生产自动化、社群运营、客服自动化</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">文心小助手 <span class="tool-company">百度</span></div>
+        <div class="tool-desc">深度集成百度生态、桌面悬浮窗、多模态能力强。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.1</span><span class="tag">百度生态</span>
+        </div>
+        <div class="tool-scene">最佳：文案辅助、设计辅助、简单文档处理</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">讯飞办公助手 <span class="tool-company">科大讯飞</span></div>
+        <div class="tool-desc">语音转写能力行业第一，深度集成讯飞生态。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.1</span><span class="tag">语音能力</span>
+        </div>
+        <div class="tool-scene">最佳：会议纪要、语音转文字、翻译</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">评分维度：日化匹配度35% · 落地难度20% · 性价比15% · 数据安全性15% · 效果确定性15%</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 3: 通用大模型 ==================== -->
+  <div class="slide" data-cat="llm">
+    <h2>二、通用大模型（基础能力底座）</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">豆包 4.0 <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">文案创意能力最强，日化行业知识库丰富，免费版功能强大。多模态理解好，长文本处理略逊于智谱清言。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.1</span><span class="tag">文案创意</span><span class="tag">免费友好</span>
+        </div>
+        <div class="tool-scene">最佳：卖点提炼、文案写作、客服脚本、竞品分析</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">文心一言 4.0 <span class="tool-company">百度</span></div>
+        <div class="tool-desc">实时联网搜索能力强，多模态生成好，行业解决方案丰富。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.7</span><span class="tag">联网搜索</span>
+        </div>
+        <div class="tool-scene">最佳：市场热点分析、竞品动态监控、产品说明书生成</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">通义千问 3.5 <span class="tool-company">阿里巴巴</span></div>
+        <div class="tool-desc">长文本处理强，表格处理能力优秀，阿里生态深度集成。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.7</span><span class="tag">表格处理</span><span class="tag">阿里生态</span>
+        </div>
+        <div class="tool-scene">最佳：合同审核、财报分析、供应链数据整理</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">智谱清言 4 <span class="tool-company">智谱AI</span></div>
+        <div class="tool-desc">超长文本处理（200万token），知识图谱构建能力强。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.4</span><span class="tag">超长文本</span>
+        </div>
+        <div class="tool-scene">最佳：企业知识库构建、专利分析、用户评论分析</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">GPT-4o / Claude 3 等国际工具全球能力强，但国内访问不稳定、数据安全风险高，适合国际业务场景，日常国内使用优先国产替代。</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 4: 产品研发 ==================== -->
+  <div class="slide" data-cat="rd">
+    <h2>三、产品研发与配方创新</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">智化科技 ChemAI <span class="tool-company">智化科技</span></div>
+        <div class="tool-desc">国内最专业的日化配方AI，百万级日化配方库，支持配方优化和成分功效预测。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.7</span><span class="tag">配方生成</span><span class="tag">百万配方库</span>
+        </div>
+        <div class="tool-scene">最佳：洁面/护肤/洗护配方生成、配方优化、成分功效预测</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">微谱 AI 成分解析 <span class="tool-company">微谱检测</span></div>
+        <div class="tool-desc">国内最专业的成分解析平台，竞品配方逆向工程准确率 85% 以上。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.5</span><span class="tag">竞品解析</span><span class="tag">逆向工程</span>
+        </div>
+        <div class="tool-scene">最佳：竞品配方解析、成分定性定量分析</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">药智网 AI 配方 <span class="tool-company">药智网</span></div>
+        <div class="tool-desc">中药日化配方最强，法规数据库最全，安评报告生成能力强。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.5</span><span class="tag">中药配方</span><span class="tag">法规数据库</span>
+        </div>
+        <div class="tool-scene">最佳：草本/中药类日化产品研发、配方合规审查</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">安评家 AI <span class="tool-company">安评家</span></div>
+        <div class="tool-desc">专门做化妆品安评，报告生成速度快，价格亲民。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.4</span><span class="tag">安评报告</span><span class="tag">价格亲民</span>
+        </div>
+        <div class="tool-scene">最佳：化妆品安评报告初稿生成、配方合规审查</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">AI 生成配方为初稿方向，必须经过实验验证。安评报告初稿可由 AI 生成，最终仍需第三方机构出具正式报告。</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 5: 包装设计 ==================== -->
+  <div class="slide" data-cat="design">
+    <h2>四、包装设计与视觉物料</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">即梦 AI <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">国内图像生成质量最高，日化包装风格理解最好，免费版功能强大。3D 能力一般。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.1</span><span class="tag">图像生成</span><span class="tag">免费友好</span>
+        </div>
+        <div class="tool-scene">最佳：包装概念设计、瓶型设计、标签设计、海报设计</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">美图设计室 <span class="tool-company">美图公司</span></div>
+        <div class="tool-desc">电商设计模板最多，一键生成能力最强，操作最简单。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.0</span><span class="tag">电商设计</span><span class="tag">一键生成</span>
+        </div>
+        <div class="tool-scene">最佳：电商主图、详情页、海报、社交媒体配图</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">文心一格 <span class="tool-company">百度</span></div>
+        <div class="tool-desc">品牌定制能力强，多风格生成，百度生态集成。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.7</span><span class="tag">品牌定制</span>
+        </div>
+        <div class="tool-scene">最佳：包装设计、电商主图、海报设计</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">稿定设计 <span class="tool-company">稿定科技</span></div>
+        <div class="tool-desc">全场景设计模板，团队协作能力强，品牌管理功能好。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.8</span><span class="tag">团队协作</span>
+        </div>
+        <div class="tool-scene">最佳：包装设计、电商设计、营销物料</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">3D 需求可选通义万相（2D转3D）或模袋云AI（专业包装3D参数化设计），Midjourney 质量最高但国内访问不稳定且版权风险需注意。</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 6: 内容营销 ==================== -->
+  <div class="slide" data-cat="marketing">
+    <h2>五、内容营销与品牌传播</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">剪映 AI <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">国内短视频工具绝对霸主，日化模板最多，AI 功能最丰富，完全免费。无明显劣势。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.7</span><span class="tag">短视频</span><span class="tag">完全免费</span>
+        </div>
+        <div class="tool-scene">最佳：短视频批量生产、产品演示视频、培训视频</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">巨量算数 <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">抖音/头条平台数据最权威，日化行业分析最深入，完全免费。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.6</span><span class="tag">趋势分析</span><span class="tag">免费</span>
+        </div>
+        <div class="tool-scene">最佳：市场趋势分析、目标人群画像、产品概念验证</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">小红书灵感营销 <span class="tool-company">小红书</span></div>
+        <div class="tool-desc">小红书平台数据最权威，种草内容分析最精准。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.2</span><span class="tag">种草洞察</span>
+        </div>
+        <div class="tool-scene">最佳：小红书营销策划、内容方向确定、达人筛选</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">讯飞配音 <span class="tool-company">科大讯飞</span></div>
+        <div class="tool-desc">AI 配音音色最自然，支持多语言多风格，价格亲民。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.1</span><span class="tag">AI配音</span>
+        </div>
+        <div class="tool-scene">最佳：视频配音、广告配音、有声书、课件配音</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 7: 电商运营 ==================== -->
+  <div class="slide" data-cat="ecommerce">
+    <h2>六、电商全渠道运营</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">生意参谋 AI <span class="tool-company">阿里巴巴</span></div>
+        <div class="tool-desc">淘宝/天猫官方数据工具，日化品类分析最深入。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.2</span><span class="tag">淘系运营</span>
+        </div>
+        <div class="tool-scene">最佳：淘宝/天猫店铺运营、商品优化、流量分析</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">阿里小蜜 <span class="tool-company">阿里巴巴</span></div>
+        <div class="tool-desc">淘宝/天猫官方智能客服，日化行业知识库最丰富。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.2</span><span class="tag">智能客服</span>
+        </div>
+        <div class="tool-scene">最佳：淘宝/天猫店铺客服、自动回复、工单管理</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">菜鸟 AI <span class="tool-company">菜鸟网络</span></div>
+        <div class="tool-desc">国内领先的物流 AI，智能分单和轨迹预测最准确。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.2</span><span class="tag">物流管理</span>
+        </div>
+        <div class="tool-scene">最佳：订单物流管理、智能分单、异常订单处理</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">抖店后台 AI <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">抖音电商官方数据工具，直播数据分析最深入。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.1</span><span class="tag">抖音电商</span>
+        </div>
+        <div class="tool-scene">最佳：抖音店铺运营、直播数据分析、达人管理</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">以上均为平台官方工具，数据权威性和接口稳定性最高。拼多多场景可用多多情报通（综合分 8.5）。</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 8: 私域运营 ==================== -->
+  <div class="slide" data-cat="private">
+    <h2>七、私域运营与客户关系</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">企业微信 AI <span class="tool-company">腾讯</span></div>
+        <div class="tool-desc">官方私域平台，生态最完善，用户接受度最高。高级功能需第三方 SCRM 补充。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.4</span><span class="tag">私域基础</span><span class="tag">官方平台</span>
+        </div>
+        <div class="tool-scene">最佳：私域流量运营、客户管理、社群运营</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">有赞 AI <span class="tool-company">有赞</span></div>
+        <div class="tool-desc">私域商城功能最完善，营销工具最丰富。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.5</span><span class="tag">私域商城</span>
+        </div>
+        <div class="tool-scene">最佳：私域商城搭建、商品管理、营销活动</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">阿里云短信 AI <span class="tool-company">阿里云</span></div>
+        <div class="tool-desc">国内短信发送最稳定，到达率最高，价格亲民。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.8</span><span class="tag">客户触达</span>
+        </div>
+        <div class="tool-scene">最佳：短信营销、验证码、客户触达</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">微盛 SCRM <span class="tool-company">微盛</span></div>
+        <div class="tool-desc">国内领先的企业微信 SCRM，日化行业解决方案成熟。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.3</span><span class="tag">SCRM</span>
+        </div>
+        <div class="tool-scene">最佳：全链路私域运营、客户生命周期管理</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 9: 供应链 ==================== -->
+  <div class="slide" data-cat="supply">
+    <h2>八、供应链与生产协同</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">黑湖智造 AI <span class="tool-company">黑湖科技</span></div>
+        <div class="tool-desc">国内领先的制造 MES 系统，日化行业案例最多，支持轻量部署。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 8.5</span><span class="tag">MES系统</span><span class="tag">日化案例多</span>
+        </div>
+        <div class="tool-scene">最佳：工厂生产管理、生产计划排程、质量控制</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">百度工业质检 <span class="tool-company">百度</span></div>
+        <div class="tool-desc">国内领先的工业视觉质检，日化产品缺陷检测准确率 99% 以上。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.2</span><span class="tag">视觉质检</span>
+        </div>
+        <div class="tool-scene">最佳：产品外观缺陷检测、包装缺陷检测</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">甄云科技 AI <span class="tool-company">甄云科技</span></div>
+        <div class="tool-desc">国内领先的采购数字化平台，电子招投标功能最强。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 7.9</span><span class="tag">采购数字化</span>
+        </div>
+        <div class="tool-scene">最佳：企业采购数字化、供应商管理、电子招投标</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">阿里犀牛智造 AI <span class="tool-company">阿里巴巴</span></div>
+        <div class="tool-desc">柔性生产能力最强，需求预测最准确。部署难度和价格较高。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 7.8</span><span class="tag">柔性生产</span>
+        </div>
+        <div class="tool-scene">最佳：快消品柔性生产、需求预测、供应链协同</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="body-text" style="font-size:0.85rem;color:var(--text-muted);">供应链工具通常涉及深度系统集成，建议在方法论的"深化整合期"推进，前期以数据整理和需求验证为主。</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 10: 内部管理与合规 ==================== -->
+  <div class="slide" data-cat="management">
+    <h2>九、内部管理与合规风控</h2>
+    <div class="section-divider"></div>
+    <div class="tool-grid cols-2">
+      <div class="tool-card">
+        <div class="tool-name">化妆品监管 APP <span class="tool-company">国家药监局</span></div>
+        <div class="tool-desc">官方权威平台，法规数据最准确，完全免费。功能相对简单但合规审查不可替代。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.7</span><span class="tag">官方权威</span><span class="tag">完全免费</span>
+        </div>
+        <div class="tool-scene">最佳：化妆品法规查询、配方合规审查、标签审查</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">飞书妙记 <span class="tool-company">字节跳动</span></div>
+        <div class="tool-desc">会议转写准确率最高，自动生成纪要和待办，完全免费。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.3</span><span class="tag">会议自动化</span><span class="tag">免费</span>
+        </div>
+        <div class="tool-scene">最佳：会议记录、会议纪要生成、待办事项管理</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">票小秘 AI <span class="tool-company">票小秘</span></div>
+        <div class="tool-desc">发票识别准确率最高，操作最简单，免费版功能强大。</div>
+        <div class="tool-bar">
+          <span class="tag green">综合分 9.1</span><span class="tag">发票管理</span><span class="tag">操作简单</span>
+        </div>
+        <div class="tool-scene">最佳：个人报销、发票管理、发票录入</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">法大大 AI <span class="tool-company">法大大</span></div>
+        <div class="tool-desc">国内领先的电子合同平台，AI 合同审核能力强。</div>
+        <div class="tool-bar">
+          <span class="tag">综合分 8.7</span><span class="tag">电子合同</span>
+        </div>
+        <div class="tool-scene">最佳：电子合同签署、合同审核、合规管理</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 11: 快速决策指南 ==================== -->
+  <div class="slide" data-cat="priority">
+    <h2>十、快速决策指南——落地优先级</h2>
+    <div class="section-divider"></div>
+    <div class="two-col">
+      <div>
+        <h3 style="color:var(--success);margin-bottom:12px;">第一优先级：0-1个月落地</h3>
+        <div class="priority-row"><span class="priority-rank">1</span><span class="priority-name">剪映 AI</span><span class="priority-val">短视频 · 效率提升10倍</span></div>
+        <div class="priority-row"><span class="priority-rank">2</span><span class="priority-name">化妆品监管 APP</span><span class="priority-val">合规审查 · 风险大幅降低</span></div>
+        <div class="priority-row"><span class="priority-rank">3</span><span class="priority-name">巨量算数</span><span class="priority-val">市场趋势 · 效率提升10倍</span></div>
+        <div class="priority-row"><span class="priority-rank">4</span><span class="priority-name">企业微信 AI</span><span class="priority-val">私域运营 · 效率提升5倍</span></div>
+        <div class="priority-row"><span class="priority-rank">5</span><span class="priority-name">飞书妙记</span><span class="priority-val">会议自动化 · 效率提升80%</span></div>
+        <div class="priority-row"><span class="priority-rank">6</span><span class="priority-name">Qoder Work</span><span class="priority-val">办公自动化 · 效率提升80%</span></div>
+        <div class="priority-row"><span class="priority-rank">7</span><span class="priority-name">豆包 4.0</span><span class="priority-val">文案创意 · 效率提升5倍</span></div>
+        <div class="priority-row"><span class="priority-rank">8</span><span class="priority-name">即梦 AI</span><span class="priority-val">图像生成 · 效率提升5倍</span></div>
+      </div>
+      <div>
+        <h3 style="color:var(--warning);margin-bottom:12px;">第二优先级：1-3个月落地</h3>
+        <div class="priority-row"><span class="priority-rank">9</span><span class="priority-name">生意参谋 AI</span><span class="priority-val">电商运营 · 效率提升30%</span></div>
+        <div class="priority-row"><span class="priority-rank">10</span><span class="priority-name">阿里小蜜</span><span class="priority-val">智能客服 · 效率提升70%</span></div>
+        <div class="priority-row"><span class="priority-rank">11</span><span class="priority-name">菜鸟 AI</span><span class="priority-val">物流管理 · 效率提升50%</span></div>
+        <div class="priority-row"><span class="priority-rank">12</span><span class="priority-name">智化科技 ChemAI</span><span class="priority-val">配方研发 · 周期缩短40%</span></div>
+        <div class="priority-row"><span class="priority-rank">13</span><span class="priority-name">微谱 AI 成分解析</span><span class="priority-val">竞品分析 · 效率提升10倍</span></div>
+        <div class="priority-row"><span class="priority-rank">14</span><span class="priority-name">黑湖智造 AI</span><span class="priority-val">生产管理 · 效率提升30%</span></div>
+        <div style="margin-top:20px;">
+          <h3 style="color:var(--accent3);margin-bottom:12px;">现场问答技巧</h3>
+          <div class="body-text" style="font-size:0.85rem;">
+            <strong>被问到没提到的工具：</strong>"它在XX方面有一定优势，但综合日化行业匹配度和落地难度，我们更推荐XX。"<br><br>
+            <strong>被问到数据安全：</strong>"配方数据首选本地执行的方案（Qoder Work），数据不上云。云端工具选国内大厂，符合国家安全法规。"<br><br>
+            <strong>被问到先上什么：</strong>"Qoder Work + 豆包4.0 + 剪映AI，三个工具零门槛快见效，一周出效果，建立信心后再扩展。"
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 12: End ==================== -->
+  <div class="slide" data-cat="end">
+    <div class="end-card">
+      <h1>工具会过时，场景不会</h1>
+      <div class="section-divider" style="margin:20px auto;"></div>
+      <p>这份文档的价值不在于"列出了所有工具"，而在于建立了场景到工具的映射关系。<br>AI 工具迭代极快，此表只反映截至 2026 年 5 月的市场情况。<br><br>工具只是交付手段——方法论不绑定任何工具，<br>只看哪种方式最快解决问题。</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Category nav dots -->
+<div class="cat-nav" id="catNav"></div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Page indicator -->
+<div class="page-indicator" id="pageIndicator"></div>
+
+<!-- Keyboard hint -->
+<div class="key-hint">
+  <kbd>←</kbd> <kbd>→</kbd> 翻页 &nbsp;|&nbsp; <kbd>Home</kbd> 首页 &nbsp;|&nbsp; <kbd>End</kbd> 末页
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+let currentSlide = 0;
+let transitioning = false;
+
+const catLabels = {
+  landing: '首页', toc: '目录', desktop: '桌面AI', llm: '通用大模型',
+  rd: '产品研发', design: '包装设计', marketing: '内容营销',
+  ecommerce: '电商运营', private: '私域运营', supply: '供应链',
+  management: '内部管理', priority: '决策指南', end: '结语'
+};
+
+// Build category nav
+const nav = document.getElementById('catNav');
+slides.forEach((s, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'cat-dot' + (i === 0 ? ' active' : '');
+  dot.dataset.label = catLabels[s.dataset.cat] || `第${i+1}页`;
+  dot.onclick = () => goTo(i);
+  nav.appendChild(dot);
+});
+
+function updateUI() {
+  // Dots
+  document.querySelectorAll('.cat-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentSlide);
+  });
+  // Progress
+  const pct = ((currentSlide) / (totalSlides - 1)) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  // Page indicator
+  document.getElementById('pageIndicator').textContent = `${currentSlide + 1} / ${totalSlides}`;
+}
+
+function goTo(index, dir) {
+  if (transitioning || index === currentSlide || index < 0 || index >= totalSlides) return;
+  transitioning = true;
+  const direction = dir || (index > currentSlide ? 'right' : 'left');
+
+  const oldSlide = slides[currentSlide];
+  oldSlide.classList.remove('active');
+
+  currentSlide = index;
+
+  const newSlide = slides[currentSlide];
+  newSlide.classList.add('active');
+  newSlide.classList.add(direction === 'right' ? 'enter-right' : 'enter-left');
+
+  setTimeout(() => {
+    newSlide.classList.remove('enter-right', 'enter-left');
+    transitioning = false;
+  }, 500);
+
+  updateUI();
+}
+
+function goSlide(index) {
+  goTo(index);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault(); goTo(currentSlide + 1);
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); goTo(currentSlide - 1);
+  } else if (e.key === 'Home') {
+    e.preventDefault(); goTo(0);
+  } else if (e.key === 'End') {
+    e.preventDefault(); goTo(totalSlides - 1);
+  }
+});
+
+// Touch navigation
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) {
+    goTo(currentSlide + (diff > 0 ? 1 : -1));
+  }
+});
+
+// Mouse wheel (throttled)
+let wheelTimer = null;
+document.addEventListener('wheel', (e) => {
+  if (wheelTimer) return;
+  wheelTimer = setTimeout(() => { wheelTimer = null; }, 800);
+  goTo(currentSlide + (e.deltaY > 0 ? 1 : -1));
+}, { passive: true });
+
+updateUI();
+</script>
+
+</body>
+</html>
