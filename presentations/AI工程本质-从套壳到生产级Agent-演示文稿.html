@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 工程本质：从套壳 API 到生产级 Agent</title>
+<style>
+  :root {
+    --bg: #0c0e14;
+    --bg-light: #161a25;
+    --accent: #60a5fa;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --text: #f0f6ff;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --card: rgba(96, 165, 250, 0.06);
+    --border: rgba(96, 165, 250, 0.12);
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --danger-bg: rgba(248,113,113,0.08);
+    --success: #34d399;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-break: normal;
+  }
+
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(96,165,250,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,165,250,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(140px); opacity: 0.07;
+    pointer-events: none; z-index: 0;
+    animation: orbFloat 30s ease-in-out infinite;
+  }
+  .orb-1 { width: 700px; height: 700px; background: var(--danger); top: -20%; left: -15%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -20%; right: -15%; animation-delay: -10s; }
+  .orb-3 { width: 400px; height: 400px; background: var(--accent); top: 30%; left: 50%; animation-delay: -20s; }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.1); }
+    66% { transform: translate(-40px, 60px) scale(0.9); }
+  }
+
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    padding: 56px 72px 72px;
+    position: absolute; top: 0; left: 0;
+    flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+  @keyframes enterRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes enterLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-number {
+    position: absolute; top: 20px; right: 32px;
+    font-size: 0.72rem; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  .slide.chapter { align-items: center; text-align: center; }
+  .slide.chapter h1 { font-size: 2.4rem; font-weight: 800; line-height: 1.3; }
+  .slide.chapter .lead {
+    font-size: 1.1rem; color: var(--text-dim); line-height: 1.7;
+    max-width: 680px; margin-top: 18px; text-align: center;
+  }
+
+  .slide h2 { font-size: 1.85rem; font-weight: 700; line-height: 1.3; margin-bottom: 18px; max-width: 850px; }
+  .slide h2 small { font-size: 1rem; font-weight: 400; color: var(--text-dim); display: block; margin-top: 6px; }
+
+  .subtitle { font-size: 1.02rem; color: var(--text-dim); line-height: 1.7; max-width: 800px; text-wrap: pretty; }
+
+  .quote {
+    font-size: 1.08rem; font-weight: 600; line-height: 1.6; color: var(--accent);
+    padding-left: 24px; border-left: 3px solid var(--accent);
+    margin: 18px 0; max-width: 800px;
+  }
+  .quote-danger {
+    font-size: 1.08rem; font-weight: 600; line-height: 1.6; color: var(--danger);
+    padding-left: 24px; border-left: 3px solid var(--danger);
+    margin: 18px 0; max-width: 800px;
+  }
+  .quote-warn {
+    font-size: 1.08rem; font-weight: 600; line-height: 1.6; color: var(--warning);
+    padding-left: 24px; border-left: 3px solid var(--warning);
+    margin: 18px 0; max-width: 800px;
+  }
+
+  .highlight-text {
+    font-size: 1.5rem; font-weight: 700; line-height: 1.5; text-align: center;
+    max-width: 800px; margin: 0 auto;
+  }
+
+  .card {
+    background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+  }
+  .card h3 { font-size: 0.92rem; margin-bottom: 6px; color: var(--accent); }
+  .card p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.55; text-wrap: pretty; }
+  .card.danger { border-color: rgba(248,113,113,0.25); background: var(--danger-bg); }
+  .card.danger h3 { color: var(--danger); }
+  .card.warning { border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.05); }
+  .card.warning h3 { color: var(--warning); }
+  .card.success { border-color: rgba(52,211,153,0.25); background: rgba(52,211,153,0.05); }
+  .card.success h3 { color: var(--success); }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+
+  .two-col { display: flex; gap: 36px; margin-top: 16px; }
+  .two-col > div { flex: 1; }
+  .two-col h3 { font-size: 0.98rem; margin-bottom: 8px; }
+
+  .list-item {
+    font-size: 0.95rem; color: var(--text-dim); line-height: 1.7;
+    padding: 5px 0 5px 18px; position: relative;
+  }
+  .list-item::before { content: "·"; position: absolute; left: 0; color: var(--accent); font-weight: bold; font-size: 1.3rem; line-height: 1.5; }
+
+  .flow { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 0.88rem; flex-wrap: wrap; }
+  .flow .node {
+    padding: 6px 12px; border-radius: 8px; background: var(--bg-light);
+    border: 1px solid var(--border); color: var(--text); font-weight: 500; font-size: 0.82rem;
+  }
+  .flow .arrow { color: var(--accent); font-size: 1rem; }
+
+  .pyramid { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 16px 0; }
+  .pyramid-level {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-weight: 600; font-size: 0.82rem;
+  }
+  .pyramid-l6 { width: 180px; background: var(--danger); color: #000; padding: 8px; }
+  .pyramid-l5 { width: 230px; background: #ef4444; color: #000; padding: 8px; }
+  .pyramid-l4 { width: 280px; background: var(--warning); color: #000; padding: 8px; }
+  .pyramid-l3 { width: 330px; background: #a78bfa; color: #000; padding: 8px; }
+  .pyramid-l2 { width: 380px; background: var(--accent2); color: #000; padding: 8px; }
+  .pyramid-l1 { width: 430px; background: var(--accent); color: #000; padding: 8px; }
+
+  .risk-bar {
+    display: flex; align-items: center; gap: 12px; margin: 6px 0;
+    font-size: 0.85rem;
+  }
+  .risk-bar .label { width: 110px; text-align: right; color: var(--text-dim); font-size: 0.82rem; flex-shrink: 0; }
+  .risk-bar .bar { flex: 1; height: 24px; border-radius: 4px; display: flex; align-items: center; padding: 0 10px; font-size: 0.78rem; font-weight: 600; }
+
+  .explosion-formula {
+    background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 24px;
+    font-family: monospace; font-size: 0.88rem; line-height: 2;
+    max-width: 700px; margin: 14px auto; text-align: center;
+    color: var(--text-dim);
+  }
+  .explosion-formula .op { color: var(--danger); font-weight: 700; }
+  .explosion-formula .item { color: var(--text); }
+
+  .muted { color: var(--text-muted); font-size: 0.85rem; }
+  .text-accent { color: var(--accent); }
+  .text-accent2 { color: var(--accent2); }
+  .text-warning { color: var(--warning); }
+  .text-danger { color: var(--danger); }
+  .text-success { color: var(--success); }
+
+  .big-arrow { text-align: center; font-size: 1.8rem; margin: 8px 0; color: var(--accent); }
+
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 100;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .progress-bar { flex: 1; margin: 0 16px; height: 3px; background: var(--bg-light); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .slide-counter { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+  .key-hint { position: fixed; bottom: 56px; right: 24px; font-size: 0.7rem; color: var(--text-muted); z-index: 100; }
+  .key-hint kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-light); font-family: inherit; }
+
+  .inline-code {
+    display: inline-block; background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 8px; font-family: monospace; font-size: 0.85rem;
+    color: var(--accent);
+  }
+
+  .tag {
+    display: inline-block; font-size: 0.72rem; padding: 3px 10px; border-radius: 12px;
+    font-weight: 600;
+  }
+  .tag-red { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.25); }
+  .tag-green { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.25); }
+  .tag-yellow { background: rgba(251,191,36,0.12); color: var(--warning); border: 1px solid rgba(251,191,36,0.25); }
+  .tag-blue { background: rgba(96,165,250,0.12); color: var(--accent); border: 1px solid rgba(96,165,250,0.25); }
+
+  @media (max-width: 768px) {
+    .slide { padding: 40px 28px; }
+    .slide.chapter h1 { font-size: 1.8rem; }
+    .slide h2 { font-size: 1.35rem; }
+    .card-grid, .card-grid-2 { grid-template-columns: 1fr; }
+    .two-col { flex-direction: column; gap: 16px; }
+    .pyramid-level { font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="slide-container" id="slides">
+
+<!-- 00: 开场——一个判断 -->
+<div class="slide chapter active">
+  <div class="slide-number">00 / 12</div>
+  <div class="section-tag" style="color:var(--danger);border-color:rgba(248,113,113,0.3);">AI 工程实践</div>
+  <h1 style="margin-top:20px;">现在很多人以为<br>接几个 API 就是 AI 工程了</h1>
+  <p class="lead">这不是批评，而是一个被反复验证的判断——<br>套壳调 API 可以快速做出 demo，<br>但离真正的生产级 AI 系统，差得很远。</p>
+</div>
+
+<!-- 01: 所以差在哪？-->
+<div class="slide">
+  <div class="slide-number">01 / 12</div>
+  <div class="section-tag">所以差在哪？</div>
+  <h2>差的不是技术，是系统</h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div>
+      <span class="tag tag-blue">你以为在做的事</span>
+      <div class="flow" style="font-size:0.82rem;margin-top:10px;">
+        <div class="node">聊天界面</div><span class="arrow">→</span><div class="node">Prompt</div><span class="arrow">→</span><div class="node">LLM API</div><span class="arrow">→</span><div class="node">工具调用</div><span class="arrow">→</span><div class="node">产品</div>
+      </div>
+      <p class="muted" style="margin-top:8px;">能快速解决自动写文档、总结会议、生成报告、工单分类……</p>
+    </div>
+    <div>
+      <span class="tag tag-red">真正需要做的事</span>
+      <div class="card-grid" style="margin-top:10px;gap:8px;">
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">数据治理</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">RAG 质量</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">评估体系</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">权限管理</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">状态管理</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">审计回滚</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">错误归因</p></div>
+        <div class="card" style="padding:10px 14px;"><p style="font-size:0.8rem;">成本控制</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:18px;font-size:1rem;">
+    核心能力来自外部基础模型，不来自自身系统积累——没有闭环，就是模型能力的临时包装层。
+  </div>
+</div>
+
+<!-- 02: 那技术呢？-->
+<div class="slide">
+  <div class="slide-number">02 / 12</div>
+  <div class="section-tag">技术没过时</div>
+  <h2>fine-tuning、训练、RAG、召回率<br><small>通用大模型太强，导致很多人误判了这些技术的价值</small></h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div>
+      <div class="card success" style="margin-bottom:12px;">
+        <h3>RAG 反而更重要了</h3>
+        <p>模型回答错，往往不是推理错，而是前面的检索阶段已经错了——旧文档、过期 runbook、废弃配置、同名服务……上下文很脏，模型再强也救不回来。</p>
+      </div>
+      <div class="card">
+        <h3>小模型没消失</h3>
+        <p>高频任务、低延迟、成本敏感、私有化部署、工单分类、日志归因——不是所有任务都值得调最强通用模型。</p>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-color:rgba(167,139,250,0.25);background:rgba(167,139,250,0.04);">
+        <h3 style="color:var(--accent2);">一句话区分</h3>
+        <p style="font-size:0.92rem;color:var(--text);margin-top:8px;">动态知识适合 RAG<br>稳定行为适合 fine-tuning</p>
+        <p style="margin-top:8px;">把企业知识灌进模型里通常是错的——知识在变，应该用 RAG；但输出格式、分类标准、工具调用习惯这些"行为"，微调效果更好。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 03: 那 Agent 呢？-->
+<div class="slide">
+  <div class="slide-number">03 / 12</div>
+  <div class="section-tag">Agent 的真相</div>
+  <h2>Agent 不是"会调用工具"那么简单</h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div>
+      <h3 style="color:var(--text-muted);font-size:0.95rem;">低配 Agent</h3>
+      <div class="flow" style="font-size:0.8rem;"><div class="node" style="border-color:var(--danger);color:var(--danger);">LLM</div><span class="arrow" style="color:var(--danger);">+</span><div class="node" style="border-color:var(--danger);color:var(--danger);">工具调用</div><span class="arrow" style="color:var(--danger);">+</span><div class="node" style="border-color:var(--danger);color:var(--danger);">Prompt</div><span class="arrow" style="color:var(--danger);">+</span><div class="node" style="border-color:var(--danger);color:var(--danger);">Workflow</div></div>
+      <p class="muted" style="margin-top:10px;">能做 demo，能跑通流程。</p>
+    </div>
+    <div>
+      <h3 style="color:var(--accent);font-size:0.95rem;">生产级 Agent 还要什么</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <span class="inline-code">状态管理</span>
+        <span class="inline-code">权限系统</span>
+        <span class="inline-code">工具治理</span>
+        <span class="inline-code">上下文可信度</span>
+        <span class="inline-code">错误恢复</span>
+        <span class="inline-code">人工接管</span>
+        <span class="inline-code">审计日志</span>
+        <span class="inline-code">可回滚</span>
+        <span class="inline-code">风险分级</span>
+        <span class="inline-code">评估体系</span>
+      </div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:18px;font-size:1rem;">
+    Agent 的核心不是"能不能调 API"，而是能不能在真实系统中可靠地选择动作、执行动作、解释动作、恢复错误。
+  </div>
+  <p class="subtitle" style="margin-top:10px;">短期看，agent 最大的价值其实是<strong class="text-accent">连接</strong>——把多个系统之间的切换、搜索、复制封装成一个自然语言入口。但这不代表它真的"理解了企业"。</p>
+</div>
+
+<!-- 04: 那"数字员工"呢？-->
+<div class="slide">
+  <div class="slide-number">04 / 12</div>
+  <div class="section-tag">重新命名</div>
+  <h2>"数字员工"这个词，掩盖了问题</h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div class="card danger">
+      <h3>"员工"暗示了什么</h3>
+      <div class="list-item">能理解组织目标</div>
+      <div class="list-item">能承担职责</div>
+      <div class="list-item">能判断优先级</div>
+      <div class="list-item">能独立处理异常</div>
+      <div class="list-item">能对结果负责</div>
+    </div>
+    <div class="card">
+      <h3>它实际是什么</h3>
+      <p style="font-size:0.92rem;color:var(--text);margin-top:4px;">一个会读上下文、会调用工具、会生成变更建议的自动化操作员。</p>
+      <p style="margin-top:10px;font-size:0.88rem;color:var(--text-muted);">员工有责任主体。Agent 没有责任主体。<br>"数字员工"这个词容易掩盖权限边界、审计责任、事故归因。</p>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:14px;">更准确的叫法：<strong class="text-accent">DevOps ChatOps Agent</strong> / <strong class="text-accent">运维自动化编排器</strong></p>
+</div>
+
+<!-- 05: 最大风险 -->
+<div class="slide chapter">
+  <div class="slide-number">05 / 12</div>
+  <div class="section-tag" style="color:var(--danger);border-color:rgba(248,113,113,0.3);">最大风险</div>
+  <h1 style="margin-top:20px;">真正危险的不是一开始不好用</h1>
+  <h1 style="font-size:2rem;font-weight:600;color:var(--danger);margin-top:8px;">而是一开始太好用</h1>
+  <p class="lead">早期试点——用户少、工具少、场景少、权限少、使用者懂系统——它会显得很聪明。<br>但这不能说明它具备大规模泛化能力。<br>类似低并发没问题，不代表高并发没问题。</p>
+</div>
+
+<!-- 06: 为什么会断崖 -->
+<div class="slide">
+  <div class="slide-number">06 / 12</div>
+  <div class="section-tag" style="color:var(--danger);border-color:rgba(248,113,113,0.3);">复杂度爆炸</div>
+  <h2>每接入一个平台，不是只多一个能力<br>而是增加了大量<span class="text-danger">交叉失败模式</span></h2>
+  <div class="explosion-formula" style="margin-top:20px;">
+    <span class="item">工具数量</span> <span class="op">×</span>
+    <span class="item">上下文</span> <span class="op">×</span>
+    <span class="item">用户角色</span> <span class="op">×</span>
+    <span class="item">服务数量</span> <span class="op">×</span>
+    <span class="item">环境数量</span> <span class="op">×</span>
+    <span class="item">权限模型</span> <span class="op">×</span>
+    <span class="item">任务类型</span> <span class="op">×</span>
+    <span class="item">历史状态</span> <span class="op">×</span>
+    <span class="item">风险等级</span>
+  </div>
+  <p class="subtitle" style="text-align:center;margin-top:14px;">复杂度不是线性增加，而是组合爆炸。<br>接入更多工具同时扩大了正确动作空间和错误动作空间。</p>
+</div>
+
+<!-- 07: 风险分层 -->
+<div class="slide">
+  <div class="slide-number">07 / 12</div>
+  <div class="section-tag">风险认知</div>
+  <h2>很多系统不是死在查询阶段<br><small>而是死在从"建议"滑向"执行"</small></h2>
+  <div style="margin-top:18px;max-width:600px;">
+    <div class="risk-bar"><span class="label">查询信息</span><div class="bar" style="background:var(--success);color:#000;width:20%;">低</div></div>
+    <div class="risk-bar"><span class="label">汇总诊断</span><div class="bar" style="background:#86efac;color:#000;width:30%;">中低</div></div>
+    <div class="risk-bar"><span class="label">生成建议</span><div class="bar" style="background:var(--warning);color:#000;width:45%;">中</div></div>
+    <div class="risk-bar"><span class="label">生成 MR</span><div class="bar" style="background:#fb923c;color:#000;width:60%;">中高</div></div>
+    <div class="risk-bar"><span class="label">自动改配置</span><div class="bar" style="background:#ef4444;color:#000;width:75%;">高</div></div>
+    <div class="risk-bar"><span class="label">自动发布/回滚</span><div class="bar" style="background:#dc2626;color:#fff;width:90%;">很高</div></div>
+    <div class="risk-bar"><span class="label">自动处理事故</span><div class="bar" style="background:#991b1b;color:#fff;width:100%;">极高</div></div>
+  </div>
+  <div class="quote-warn" style="margin-top:16px;font-size:0.95rem;">
+    提交 MR 是动作，解决问题是结果。能改代码不代表知道根因是不是这里、改动是否覆盖所有路径、是否引入兼容性问题。
+  </div>
+</div>
+
+<!-- 08: 那怎么办？ -->
+<div class="slide">
+  <div class="slide-number">08 / 12</div>
+  <div class="section-tag">治理思路</div>
+  <h2>不能靠"模型更强"解决复杂度问题<br><small>必须靠系统治理</small></h2>
+  <div class="card-grid-2" style="margin-top:16px;">
+    <div class="card success">
+      <h3>工具分级</h3>
+      <p>只读查询可宽放开，MR 提交必须绑定 review，配置修改强审批，生产操作默认禁止白名单开放，删除/权限类极严控制。</p>
+    </div>
+    <div class="card success">
+      <h3>上下文加质量标签</h3>
+      <p>每段上下文带上来源、时间、环境、服务、版本、权限、可信等级。否则模型会把旧文档和新监控混在一起判断。</p>
+    </div>
+    <div class="card warning">
+      <h3>必须有拒绝机制</h3>
+      <p>信息不足、风险过高、用户无权限、上下文冲突——如果一个 agent 永远"尽力回答、尽力执行"，它一定会出事。</p>
+    </div>
+    <div class="card warning">
+      <h3>复杂度压测</h3>
+      <p>工具数量压测、上下文冲突压测、权限压测、并发状态压测——测试模糊指令是否越界。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 09: 能力分级 -->
+<div class="slide">
+  <div class="slide-number">09 / 12</div>
+  <div class="section-tag">能力分级</div>
+  <h2>不要所有能力一起开放</h2>
+  <div class="pyramid" style="margin-top:16px;">
+    <div class="pyramid-level pyramid-l6">L6 · 禁止 agent 执行的动作</div>
+    <div class="pyramid-level pyramid-l5">L5 · 高风险动作强审批</div>
+    <div class="pyramid-level pyramid-l4">L4 · 低风险自动执行</div>
+    <div class="pyramid-level pyramid-l3">L3 · 生成 MR，人类 review</div>
+    <div class="pyramid-level pyramid-l2">L2 · 生成建议</div>
+    <div class="pyramid-level pyramid-l1">L1 · 查询总结</div>
+  </div>
+  <p class="subtitle" style="text-align:center;margin-top:12px;">不要一个大 agent 包打天下——入口统一，内部拆成多个窄 agent 或确定性流程</p>
+</div>
+
+<!-- 10: 评价标准 -->
+<div class="slide">
+  <div class="slide-number">10 / 12</div>
+  <div class="section-tag">评价标准</div>
+  <h2>评价 agent 不能看"动作数量"<br><small>要看结果质量</small></h2>
+  <div class="two-col" style="margin-top:16px;">
+    <div class="card">
+      <h3>看什么</h3>
+      <div class="list-item">成功率、采纳率、错误率、回滚率</div>
+      <div class="list-item">人类修改比例、越权率</div>
+      <div class="list-item">MTTR 是否下降</div>
+      <div class="list-item">用户是否减少重复劳动</div>
+    </div>
+    <div class="card danger">
+      <h3>不看什么</h3>
+      <div class="list-item" style="color:var(--text-muted);">调用了多少工具</div>
+      <div class="list-item" style="color:var(--text-muted);">提交了多少 MR</div>
+      <div class="list-item" style="color:var(--text-muted);">接入了多少平台</div>
+      <div class="list-item" style="color:var(--text-muted);">支持了多少任务</div>
+    </div>
+  </div>
+  <div class="quote-danger" style="margin-top:14px;font-size:0.92rem;">
+    关键指标：每新增一个工具、平台、用户群后，原有任务成功率是否下降？新增能力导致旧能力退化 = 复杂度开始互相干扰。
+  </div>
+</div>
+
+<!-- 11: 总结 -->
+<div class="slide chapter">
+  <div class="slide-number">11 / 12</div>
+  <div class="section-tag" style="color:var(--danger);border-color:rgba(248,113,113,0.3);">总结</div>
+  <h1 style="margin-top:20px;font-size:2rem;line-height:1.5;">当前很多 AI 应用不是没价值</h1>
+  <h1 style="font-size:1.6rem;font-weight:600;color:var(--danger);margin-top:6px;">而是容易被过度命名、过度授权、过度扩张</h1>
+  <p class="lead">API 套壳可以快速产生工具价值，但真正的生产级 AI 系统必须依赖数据、检索、评估、权限、状态、审计、回滚和人机协同。</p>
+</div>
+
+<!-- 12: 结语 -->
+<div class="slide chapter">
+  <div class="slide-number">12 / 12</div>
+  <div class="section-tag">结语</div>
+  <h1 style="margin-top:20px;font-size:2rem;line-height:1.5;">它不是不能做</h1>
+  <h1 style="font-size:1.5rem;font-weight:600;color:var(--text-dim);margin-top:8px;line-height:1.5;">而是不能被当成一个"越来越强的万能员工"来做</h1>
+  <div class="quote" style="margin-top:28px;text-align:center;border-left:none;padding:0;max-width:600px;font-size:1.1rem;">
+    它必须被当成一个<br>高权限、不确定、需要治理的<br><span class="text-accent">自动化系统</span>来做
+  </div>
+</div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevSlide()">&larr; 上一页</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="slide-counter" id="slideCounter">1 / 12</span>
+  <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 &rarr;</button>
+</div>
+<div class="key-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> 或 <kbd>Space</kbd> 翻页
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+function showSlide(index, dir) {
+  if (index < 0 || index >= slides.length) return;
+  slides[current].classList.remove('active', 'enter-left', 'enter-right');
+  current = index;
+  slides[current].classList.add('active');
+  slides[current].classList.add(dir === 'right' ? 'enter-right' : 'enter-left');
+  setTimeout(() => slides[current].classList.remove('enter-right', 'enter-left'), 500);
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === slides.length - 1;
+  document.getElementById('progressFill').style.width = ((current + 1) / slides.length * 100) + '%';
+  document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + slides.length;
+}
+function nextSlide() { showSlide(current + 1, 'right'); }
+function prevSlide() { showSlide(current - 1, 'left'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+showSlide(0, 'right');
+</script>
+</body>
+</html>
