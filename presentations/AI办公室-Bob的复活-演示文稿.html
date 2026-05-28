@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 办公室：Microsoft Bob 的复活</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --bg-light: #141e30;
+    --accent: #60a5fa;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --text: #f0f6ff;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --card: rgba(96, 165, 250, 0.06);
+    --border: rgba(96, 165, 250, 0.12);
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --bob-yellow: #fbbf24;
+    --bob-retro: #10b981;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-break: normal;
+  }
+
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(96,165,250,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,165,250,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(140px); opacity: 0.08;
+    pointer-events: none; z-index: 0;
+    animation: orbFloat 30s ease-in-out infinite;
+  }
+  .orb-1 { width: 700px; height: 700px; background: var(--accent); top: -20%; left: -15%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -20%; right: -15%; animation-delay: -10s; }
+  .orb-3 { width: 400px; height: 400px; background: var(--bob-yellow); top: 30%; left: 50%; animation-delay: -20s; }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.1); }
+    66% { transform: translate(-40px, 60px) scale(0.9); }
+  }
+
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    padding: 56px 72px 72px;
+    position: absolute; top: 0; left: 0;
+    flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+  @keyframes enterRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes enterLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
+
+  .slide-number {
+    position: absolute; top: 20px; right: 32px;
+    font-size: 0.72rem; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  .slide.chapter { align-items: center; text-align: center; }
+  .slide.chapter .chapter-num {
+    font-size: 0.78rem; color: var(--text-muted);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .slide.chapter h1 { font-size: 2.6rem; font-weight: 800; line-height: 1.25; margin-bottom: 14px; }
+  .slide.chapter h1 span.accent { color: var(--accent); }
+  .slide.chapter h1 span.accent2 { color: var(--accent2); }
+  .slide.chapter h1 span.yellow { color: var(--bob-yellow); }
+  .slide.chapter .subtitle {
+    font-size: 1.05rem; color: var(--text-dim); line-height: 1.7;
+    max-width: 700px; margin: 0 auto;
+  }
+
+  .slide h2 { font-size: 1.9rem; font-weight: 700; line-height: 1.3; margin-bottom: 20px; max-width: 850px; }
+  .slide h2 span.accent { color: var(--accent); }
+  .slide h2 span.accent2 { color: var(--accent2); }
+  .slide h2 span.yellow { color: var(--bob-yellow); }
+  .slide h2 span.danger { color: var(--danger); }
+
+  .subtitle { font-size: 1.05rem; color: var(--text-dim); line-height: 1.7; max-width: 800px; text-wrap: pretty; }
+
+  .quote {
+    font-size: 1.1rem; font-weight: 600; line-height: 1.6; color: var(--accent);
+    padding-left: 24px; border-left: 3px solid var(--accent);
+    margin: 20px 0; max-width: 800px;
+  }
+
+  .quote-yellow {
+    font-size: 1.1rem; font-weight: 600; line-height: 1.6; color: var(--bob-yellow);
+    padding-left: 24px; border-left: 3px solid var(--bob-yellow);
+    margin: 20px 0; max-width: 800px;
+  }
+
+  .highlight-text {
+    font-size: 1.6rem; font-weight: 700; line-height: 1.5; text-align: center;
+    max-width: 800px; margin: 0 auto;
+  }
+
+  .list-item {
+    font-size: 1rem; color: var(--text-dim); line-height: 1.8;
+    padding: 6px 0; padding-left: 20px; position: relative;
+  }
+  .list-item::before {
+    content: "\B7"; position: absolute; left: 0; color: var(--accent); font-weight: bold; font-size: 1.4rem;
+  }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+  .card {
+    background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+  }
+  .card h3 { font-size: 0.95rem; margin-bottom: 6px; color: var(--accent); }
+  .card p { font-size: 0.85rem; color: var(--text-dim); line-height: 1.55; text-wrap: pretty; }
+
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+
+  .table-container { margin-top: 16px; }
+  .table-container table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .table-container th {
+    text-align: left; padding: 10px 14px; font-weight: 600; color: var(--accent);
+    border-bottom: 2px solid var(--border); font-size: 0.82rem;
+  }
+  .table-container td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  .table-container tr:hover td { color: var(--text); background: var(--card); }
+
+  .two-col { display: flex; gap: 40px; margin-top: 18px; }
+  .two-col > div { flex: 1; }
+  .two-col h3 { font-size: 1rem; margin-bottom: 10px; color: var(--accent); }
+
+  .flow {
+    display: flex; align-items: center; gap: 8px; margin: 12px 0;
+    font-size: 0.9rem; flex-wrap: wrap;
+  }
+  .flow .node {
+    padding: 6px 12px; border-radius: 8px; background: var(--bg-light);
+    border: 1px solid var(--border); color: var(--text); font-weight: 500;
+  }
+  .flow .arrow { color: var(--accent); font-size: 1rem; }
+
+  .img-showcase {
+    display: flex; align-items: center; justify-content: center;
+    gap: 40px; margin: 20px 0;
+  }
+  .img-showcase img {
+    max-height: 280px; border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .stage-timeline { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .stage {
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .stage-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .stage-num.s1 { background: var(--accent); color: var(--bg); }
+  .stage-num.s2 { background: var(--accent2); color: var(--bg); }
+  .stage-num.s3 { background: var(--accent3); color: var(--bg); }
+  .stage h3 { font-size: 1rem; margin-bottom: 4px; }
+  .stage p { font-size: 0.88rem; color: var(--text-dim); line-height: 1.5; }
+
+  .agent-card {
+    background: var(--bg-light); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+  }
+  .agent-card .agent-name { font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .agent-card .agent-duties { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
+
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 100;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .progress-bar { flex: 1; margin: 0 16px; height: 3px; background: var(--bg-light); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .slide-counter { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+  .key-hint { position: fixed; bottom: 56px; right: 24px; font-size: 0.7rem; color: var(--text-muted); z-index: 100; }
+  .key-hint kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-light); font-family: inherit; }
+
+  .muted { color: var(--text-muted); font-size: 0.88rem; }
+  .text-accent { color: var(--accent); }
+  .text-accent2 { color: var(--accent2); }
+  .text-yellow { color: var(--bob-yellow); }
+
+  .big-arrow { text-align: center; font-size: 2rem; margin: 10px 0; color: var(--accent); }
+
+  .retro-tag {
+    display: inline-block;
+    font-size: 0.68rem; font-weight: 600;
+    color: var(--bob-retro); letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 16px;
+    margin-bottom: 10px;
+  }
+
+  @media (max-width: 768px) {
+    .slide { padding: 40px 28px; }
+    .slide.chapter h1 { font-size: 1.8rem; }
+    .slide h2 { font-size: 1.4rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .two-col { flex-direction: column; gap: 18px; }
+    .card-grid-2 { grid-template-columns: 1fr; }
+    .img-showcase { flex-direction: column; gap: 16px; }
+    .img-showcase img { max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="slide-container" id="slides">
+
+<!-- 00: Title -->
+<div class="slide chapter active">
+  <div class="slide-number">00 / 16</div>
+  <div class="section-tag" style="color:var(--bob-yellow);border-color:rgba(251,191,36,0.3);">历史观察 · AI 预见</div>
+  <h1 style="margin-top:20px;">AI 办公室<br><span style="color:var(--bob-yellow);">Microsoft Bob 的复活</span></h1>
+  <p class="subtitle" style="margin-top:20px;">一个失败产品如何预言了 AI Agent 办公室</p>
+</div>
+
+<!-- 01: Bob 的初衷 -->
+<div class="slide">
+  <div class="slide-number">01 / 16</div>
+  <div class="retro-tag">1995 · Microsoft Bob</div>
+  <h2>1995 年，微软想解决一个问题</h2>
+  <p class="subtitle">普通人打开电脑，看到的是什么？</p>
+  <div style="margin-top:24px;">
+    <div class="flow" style="font-size:1rem;">
+      <div class="node" style="background:var(--danger);color:#000;border:none;">文件管理器</div>
+      <span class="arrow" style="color:var(--danger);">→</span>
+      <div class="node" style="background:var(--danger);color:#000;border:none;">程序管理器</div>
+      <span class="arrow" style="color:var(--danger);">→</span>
+      <div class="node" style="background:var(--danger);color:#000;border:none;">窗口</div>
+      <span class="arrow" style="color:var(--danger);">→</span>
+      <div class="node" style="background:var(--danger);color:#000;border:none;">菜单</div>
+      <span class="arrow" style="color:var(--danger);">→</span>
+      <div class="node" style="background:var(--danger);color:#000;border:none;">？？？</div>
+    </div>
+  </div>
+  <div class="quote-yellow" style="margin-top:28px;">
+    用户并不天然关心"文件系统、应用程序、路径、权限"。他们想要的只是"帮我写封信"。
+  </div>
+  <p class="subtitle">Bob 的回答是：<strong style="color:var(--bob-yellow);">把电脑变成一间房子</strong></p>
+</div>
+
+<!-- 02: Bob 的样子 -->
+<div class="slide">
+  <div class="slide-number">02 / 16</div>
+  <div class="retro-tag">1995 · Microsoft Bob</div>
+  <h2>Bob 把电脑变成了"一个家"</h2>
+  <p class="subtitle">没有桌面，没有开始菜单。只有房间、门、家具，和一个叫 Rover 的小狗助手。</p>
+  <div class="img-showcase">
+    <img src="../references/Microsoft-Bob/login.png" alt="Bob 登录界面">
+    <img src="../references/Microsoft-Bob/main_room.png" alt="Bob 房间界面">
+  </div>
+  <p class="muted" style="text-align:center;">点击图片查看原始界面截图</p>
+</div>
+
+<!-- 03: Bob 的逻辑 -->
+<div class="slide">
+  <div class="slide-number">03 / 16</div>
+  <div class="retro-tag">1995 · Microsoft Bob</div>
+  <h2>Bob 的设计逻辑其实不荒唐</h2>
+  <div class="card-grid" style="margin-top:18px;">
+    <div class="card">
+      <h3>房子隐喻</h3>
+      <p>把抽象计算映射成用户熟悉的现实空间——客厅、书房、厨房对应不同的功能区域。</p>
+    </div>
+    <div class="card">
+      <h3>现实物品</h3>
+      <p>写信？点击桌上的笔和纸。发邮件？点击墙上的信箱。不需要理解"双击 .exe"。</p>
+    </div>
+    <div class="card">
+      <h3>拟人助手</h3>
+      <p>Rover 小狗通过气泡引导用户，这是最早的"软件角色感"尝试。</p>
+    </div>
+    <div class="card">
+      <h3>任务导向</h3>
+      <p>"帮我寄封信"而不是"打开 Word → 找模板 → 保存 → 发邮件"。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 04: Bob 的失败 -->
+<div class="slide">
+  <div class="slide-number">04 / 16</div>
+  <div class="retro-tag">1995 · Microsoft Bob</div>
+  <h2>但 Bob 失败了</h2>
+  <p class="subtitle">发布仅一年就停产，销量约 5.8 万份，远低于微软预期。</p>
+  <div class="card-grid-2" style="margin-top:18px;">
+    <div>
+      <h3 style="color:var(--danger);">直接原因</h3>
+      <div class="list-item" style="color:var(--text-dim);">硬件要求太高，当年电脑跑不动</div>
+      <div class="list-item" style="color:var(--text-dim);">视觉风格太幼稚，"可爱"变成"碍事"</div>
+      <div class="list-item" style="color:var(--text-dim);">操作效率低，熟练用户觉得麻烦</div>
+    </div>
+    <div>
+      <h3 style="color:var(--danger);">根本原因</h3>
+      <div class="quote" style="border-left-color:var(--danger);color:var(--danger);font-size:1rem;margin:10px 0;">
+        Bob 只是一个包装层——没有真正的智能。
+      </div>
+      <p class="subtitle" style="font-size:0.92rem;">不能理解自然语言，不能跨应用完成任务，不能学习用户偏好。用户感受到的不是"智能助理"，而是"挡在我和电脑之间的玩具界面"。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 05: Bob 的遗产 -->
+<div class="slide">
+  <div class="slide-number">05 / 16</div>
+  <div class="retro-tag">Bob 的遗产</div>
+  <h2>Bob 死了，但它的影子还在</h2>
+  <p class="subtitle">Bob 的元素在微软后续产品中持续出现：</p>
+  <div style="margin-top:20px;">
+    <div class="flow" style="font-size:0.92rem;">
+      <div class="node" style="border-color:var(--bob-yellow);color:var(--bob-yellow);">Microsoft Bob</div>
+      <span class="arrow">→</span>
+      <div class="node">Microsoft Agent</div>
+      <span class="arrow">→</span>
+      <div class="node">Clippy</div>
+      <span class="arrow">→</span>
+      <div class="node">Windows XP Rover</div>
+      <span class="arrow">→</span>
+      <div class="node" style="border-color:var(--accent);color:var(--accent);">Copilot / Agents</div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:24px;">
+    Bob 不是单纯的笑话。它代表了一条当时技术无法兑现的交互路线。
+  </div>
+</div>
+
+<!-- 06: 为什么今天值得讨论 -->
+<div class="slide chapter">
+  <div class="slide-number">06 / 16</div>
+  <div class="section-tag">转折点</div>
+  <div class="chapter-num">为什么今天值得重新讨论 Bob？</div>
+  <h1 style="font-size:2.2rem;margin-top:16px;">Bob 当年缺失的条件<br><span style="color:var(--accent);">现在都具备了</span></h1>
+</div>
+
+<!-- 07: 能力补足对比 -->
+<div class="slide">
+  <div class="slide-number">07 / 16</div>
+  <div class="section-tag">能力对照</div>
+  <h2>从 Bob 到 AI Agent：<span class="accent">缺失的能力被逐一补足</span></h2>
+  <div class="table-container" style="margin-top:16px;">
+    <table>
+      <thead>
+        <tr><th>Bob 时代缺失</th><th>AI 时代的补足</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>理解自然语言</td><td>LLM 可以理解复杂意图</td></tr>
+        <tr><td>任务规划</td><td>Agent 可以拆解步骤</td></tr>
+        <tr><td>跨软件操作</td><td>API、RPA、浏览器控制、GUI agent</td></tr>
+        <tr><td>个性化</td><td>长上下文、记忆、企业知识库</td></tr>
+        <tr><td>组织协作</td><td>多 agent、权限、流程、审计</td></tr>
+        <tr><td>内容生成</td><td>文档、邮件、表格、PPT、代码生成</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 08: 新愿景 -->
+<div class="slide">
+  <div class="slide-number">08 / 16</div>
+  <div class="section-tag">新愿景</div>
+  <h2>Bob 的旧愿景可以重述为：</h2>
+  <div class="highlight-text" style="color:var(--accent);font-size:1.8rem;margin-top:30px;">
+    用户不再操作软件，<br>而是管理一组<br>有职责、有权限、有上下文的<br><span style="color:var(--bob-yellow);">数字员工</span>
+  </div>
+</div>
+
+<!-- 09: 岗位型 Agent -->
+<div class="slide">
+  <div class="slide-number">09 / 16</div>
+  <div class="section-tag">岗位型 Agent</div>
+  <h2>办公室里的各个岗位都是 Agent</h2>
+  <p class="subtitle">这就是 Bob 的"房间和角色"概念在企业 AI 时代的复活版。</p>
+  <div class="card-grid" style="margin-top:18px;">
+    <div class="agent-card">
+      <div class="agent-name">财务 Agent</div>
+      <div class="agent-duties">报销初审、发票归档、预算查询、成本分析</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-name">法务 Agent</div>
+      <div class="agent-duties">合同条款检查、风险提示、模板生成、合规审查</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-name">PM Agent</div>
+      <div class="agent-duties">跟踪任务、生成周报、催办、识别延期风险</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-name">运维 Agent</div>
+      <div class="agent-duties">监控告警解释、故障排查建议、工单联动</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-name">HR Agent</div>
+      <div class="agent-duties">简历初筛、入职流程、政策问答、培训推荐</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-name">数据 Agent</div>
+      <div class="agent-duties">拉数、解释指标、生成图表和业务洞察</div>
+    </div>
+  </div>
+</div>
+
+<!-- 10: 不该长得像 Bob -->
+<div class="slide">
+  <div class="slide-number">10 / 16</div>
+  <div class="section-tag">形态设计</div>
+  <h2>但它不应该长得像 Bob</h2>
+  <p class="subtitle">真正可能成功的形态，不是把屏幕变成一个卡通办公室。而是三类界面叠加：</p>
+  <div class="card-grid-2" style="margin-top:18px;">
+    <div class="card">
+      <h3>1. 对话式入口</h3>
+      <p>"让财务 agent 看一下这个项目预算有没有异常。"用自然语言调用角色——这是最接近 Bob 的部分。</p>
+    </div>
+    <div class="card">
+      <h3>2. 工作台式界面</h3>
+      <p>一个 agent 工作台，显示各 agent 状态、正在处理的任务、需要你确认的事项。比卡通房间更适合企业场景。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <h3>3. 嵌入式 Agent</h3>
+    <p>在 Word 里是合同审查 agent，在 Excel 里是数据分析 agent，在 ERP 里是财务 agent——嵌入现有软件，而不是重新发明一个桌面系统。</p>
+  </div>
+</div>
+
+<!-- 11: 岗位说明书 -->
+<div class="slide">
+  <div class="slide-number">11 / 16</div>
+  <div class="section-tag">最大机会</div>
+  <h2>岗位级 Agent，而不是人格化宠物</h2>
+  <div class="two-col" style="margin-top:18px;">
+    <div>
+      <h3 style="color:var(--danger);">Bob 的错</h3>
+      <p class="subtitle">角色先行，能力不足。<br>"我是一个会说话的小狗助手。"</p>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3);">AI 时代应该反过来</h3>
+      <p class="subtitle">不是先设计可爱的角色，<br>而是先定义一个清晰的岗位。</p>
+    </div>
+  </div>
+  <div style="margin-top:20px;background:var(--bg-light);border:1px solid var(--border);border-radius:10px;padding:18px;font-family:monospace;font-size:0.85rem;line-height:1.7;max-width:600px;">
+    <span style="color:var(--accent);">名称：</span>合同审查 Agent<br>
+    <span style="color:var(--accent);">职责：</span>识别合同风险、对比模板、生成修改建议<br>
+    <span style="color:var(--accent);">权限：</span>可读取合同库、供应商资料、历史审查意见<br>
+    <span style="color:var(--accent);">限制：</span>不能自动签署合同，不能绕过法务审批<br>
+    <span style="color:var(--accent);">输入：</span>合同文档、交易背景、供应商信息<br>
+    <span style="color:var(--accent);">输出：</span>风险清单、修改建议、审批摘要<br>
+    <span style="color:var(--accent);">审计：</span>记录每次判断依据和引用来源
+  </div>
+</div>
+
+<!-- 12: 治理风险 -->
+<div class="slide">
+  <div class="slide-number">12 / 16</div>
+  <div class="section-tag">最大风险</div>
+  <h2>企业里不能有<span class="danger">"黑箱员工"</span></h2>
+  <p class="subtitle">最关键的问题不是 UI，而是治理。需要解决：</p>
+  <div class="card-grid" style="margin-top:18px;">
+    <div class="card">
+      <h3>权限边界</h3>
+      <p>财务 agent 能不能看 HR 数据？运维 agent 能不能直接重启设备？</p>
+    </div>
+    <div class="card">
+      <h3>责任归属</h3>
+      <p>Agent 做错了，谁负责？使用者、部门负责人、还是模型厂商？</p>
+    </div>
+    <div class="card">
+      <h3>审批机制</h3>
+      <p>哪些事可以自动执行，哪些必须人工确认？</p>
+    </div>
+    <div class="card">
+      <h3>可审计性</h3>
+      <p>Agent 为什么这么判断？引用了哪些数据？执行了哪些动作？</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:16px;border-left-color:var(--bob-yellow);color:var(--bob-yellow);font-size:0.95rem;">
+    微软最近允许用户移除 Copilot 浮动按钮——助手不能挡路，这是 Bob/Clippy 留下的教训。
+  </div>
+</div>
+
+<!-- 13: 三个阶段 -->
+<div class="slide">
+  <div class="slide-number">13 / 16</div>
+  <div class="section-tag">演进判断</div>
+  <h2>未来交互模式的三个阶段</h2>
+  <div class="stage-timeline" style="margin-top:16px;">
+    <div class="stage">
+      <div class="stage-num s1">1</div>
+      <div>
+        <h3>单点 Copilot</h3>
+        <p>每个软件里都有 AI 助手——Word 帮你写，Excel 帮你分析，邮件帮你回复。这是现在已经发生的阶段。</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num s2">2</div>
+      <div>
+        <h3>岗位型 Agent</h3>
+        <p>每个业务职能有自己的 agent——财务 agent、法务 agent、项目 agent。这会成为企业 AI 落地的主战场。</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num s3">3</div>
+      <div>
+        <h3>组织级 Agent Network</h3>
+        <p>多个 agent 之间自动协作，人类变成目标设定者和关键审批者。这才是真正意义上的"AI 办公室"。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 14: 总结表 -->
+<div class="slide">
+  <div class="slide-number">14 / 16</div>
+  <div class="section-tag">Bob 会复活吗？</div>
+  <h2>会，但不是以 Bob 的<span class="yellow">外形</span>复活</h2>
+  <p class="subtitle">而是以它的底层隐喻复活。</p>
+  <div class="table-container" style="margin-top:16px;">
+    <table>
+      <thead>
+        <tr><th>Bob 的元素</th><th>AI 时代</th><th>形式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>拟人化助手</td><td style="color:var(--accent3);">会</td><td>岗位型 agent</td></tr>
+        <tr><td>房间/办公室隐喻</td><td style="color:var(--warning);">部分会</td><td>工作台、组织视图</td></tr>
+        <tr><td>卡通角色</td><td style="color:var(--warning);">小范围会</td><td>教育、儿童、陪伴</td></tr>
+        <tr><td>替代桌面系统</td><td style="color:var(--danger);">不太可能</td><td>现有软件中嵌入</td></tr>
+        <tr><td>自然语言操作</td><td style="color:var(--accent3);">会</td><td>主入口之一</td></tr>
+        <tr><td>软件替你办事</td><td style="color:var(--accent3);">会</td><td>Agent + API + 审批流</td></tr>
+        <tr><td>主动提醒</td><td style="color:var(--accent3);">会</td><td>但必须可控、低打扰</td></tr>
+        <tr><td>全自动办公</td><td style="color:var(--warning);">有限</td><td>高风险动作仍需审批</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 15: 核心观点 -->
+<div class="slide">
+  <div class="slide-number">15 / 16</div>
+  <div class="section-tag">本质差异</div>
+  <h2>Microsoft Bob 是"把电脑伪装成办公室"</h2>
+  <div class="big-arrow">↓</div>
+  <h2>AI Agent 是<span style="color:var(--accent);">"把办公室抽象成一组可委托的数字岗位"</span></h2>
+  <div class="two-col" style="margin-top:24px;">
+    <div style="text-align:center;">
+      <div class="section-tag" style="color:var(--text-muted);border-color:var(--text-muted);opacity:0.6;">Bob</div>
+      <p class="muted" style="margin-top:10px;">玩具化 · 包装层<br>能力不足 · 挡路</p>
+    </div>
+    <div style="text-align:center;">
+      <div class="section-tag" style="color:var(--accent);border-color:var(--accent);">Agentic Office</div>
+      <p class="subtitle" style="margin-top:10px;">岗位化 · 委托层<br>能力足够 · 嵌入</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:24px;text-align:center;border-left:none;padding:0;">
+    这两者表面相似，但本质上后者更有机会成功。
+  </div>
+</div>
+
+<!-- 16: 结语 -->
+<div class="slide chapter">
+  <div class="slide-number">16 / 16</div>
+  <div class="section-tag" style="color:var(--bob-yellow);border-color:rgba(251,191,36,0.3);">结语</div>
+  <div class="chapter-num">Agentic Office</div>
+  <h1 style="font-size:2.2rem;margin-top:16px;">Bob 没有死<br><span style="color:var(--accent);">它只是在等 30 年</span></h1>
+  <p class="subtitle" style="margin-top:20px;">等 LLM 读懂人话，等 Agent 能执行任务，<br>等企业系统准备好 API 和工作流。</p>
+  <div class="highlight-text" style="color:var(--bob-yellow);margin-top:28px;font-size:1.3rem;">
+    一个失败产品的底层隐喻，<br>在 AI 时代找到了正确的形态。
+  </div>
+</div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevSlide()">&larr; 上一页</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="slide-counter" id="slideCounter">1 / 16</span>
+  <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 &rarr;</button>
+</div>
+<div class="key-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> 或 <kbd>Space</kbd> 翻页
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+function showSlide(index, dir) {
+  if (index < 0 || index >= slides.length) return;
+  slides[current].classList.remove('active', 'enter-left', 'enter-right');
+  current = index;
+  slides[current].classList.add('active');
+  slides[current].classList.add(dir === 'right' ? 'enter-right' : 'enter-left');
+  setTimeout(() => slides[current].classList.remove('enter-right', 'enter-left'), 500);
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === slides.length - 1;
+  document.getElementById('progressFill').style.width = ((current + 1) / slides.length * 100) + '%';
+  document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + slides.length;
+}
+function nextSlide() { showSlide(current + 1, 'right'); }
+function prevSlide() { showSlide(current - 1, 'left'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+});
+showSlide(0, 'right');
+</script>
+</body>
+</html>
