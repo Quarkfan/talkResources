@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>被避免的事故没有尸体</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg-light: #141c28;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --accent3: #34d399;
+    --text: #f0f6ff;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --card: rgba(56, 189, 248, 0.06);
+    --border: rgba(56, 189, 248, 0.12);
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --danger-bg: rgba(248,113,113,0.08);
+    --success: #34d399;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; width: 100vw;
+    user-select: none; word-break: normal; overflow-wrap: break-word; line-break: normal;
+  }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(56,189,248,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(140px); opacity: 0.07;
+    pointer-events: none; z-index: 0; animation: orbFloat 30s ease-in-out infinite;
+  }
+  .orb-1 { width: 700px; height: 700px; background: var(--accent); top: -20%; left: -15%; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -20%; right: -15%; animation-delay: -10s; }
+  .orb-3 { width: 400px; height: 400px; background: var(--accent3); top: 30%; left: 50%; animation-delay: -20s; }
+  @keyframes orbFloat {
+    0%,100%{transform:translate(0,0) scale(1);}
+    33%{transform:translate(60px,-40px) scale(1.1);}
+    66%{transform:translate(-40px,60px) scale(0.9);}
+  }
+  .slide-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+  .slide {
+    display: none; width: 100%; height: 100%; padding: 52px 64px 68px;
+    position: absolute; top: 0; left: 0; flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+  .slide.enter-right { animation: enterRight 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .slide.enter-left { animation: enterLeft 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  @keyframes enterRight { from{opacity:0;transform:translateX(60px);} to{opacity:1;transform:translateX(0);} }
+  @keyframes enterLeft { from{opacity:0;transform:translateX(-60px);} to{opacity:1;transform:translateX(0);} }
+  .slide-number { position: absolute; top: 18px; right: 32px; font-size: 0.7rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .section-tag {
+    display: inline-block; font-size: 0.68rem; font-weight: 600; color: var(--accent);
+    letter-spacing: 0.08em; padding: 3px 10px; border: 1px solid var(--border); border-radius: 18px; margin-bottom: 12px;
+  }
+  .slide.chapter { align-items: center; text-align: center; }
+  .slide.chapter h1 { font-size: 2.2rem; font-weight: 800; line-height: 1.3; }
+  .slide.chapter .lead { font-size: 1rem; color: var(--text-dim); line-height: 1.7; max-width: 680px; margin-top: 16px; text-align: center; }
+  .slide h2 { font-size: 1.7rem; font-weight: 700; line-height: 1.3; margin-bottom: 14px; max-width: 850px; }
+  .slide h2 small { font-size: 0.92rem; font-weight: 400; color: var(--text-dim); display: block; margin-top: 4px; }
+  .subtitle { font-size: 0.95rem; color: var(--text-dim); line-height: 1.65; max-width: 800px; text-wrap: pretty; }
+  .quote {
+    font-size: 1rem; font-weight: 600; line-height: 1.55; color: var(--accent);
+    padding-left: 20px; border-left: 3px solid var(--accent); margin: 14px 0; max-width: 780px;
+  }
+  .quote-danger {
+    font-size: 1rem; font-weight: 600; line-height: 1.55; color: var(--danger);
+    padding-left: 20px; border-left: 3px solid var(--danger); margin: 14px 0; max-width: 780px;
+  }
+  .quote-warn {
+    font-size: 1rem; font-weight: 600; line-height: 1.55; color: var(--warning);
+    padding-left: 20px; border-left: 3px solid var(--warning); margin: 14px 0; max-width: 780px;
+  }
+  .card { background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .card h3 { font-size: 0.85rem; margin-bottom: 5px; color: var(--accent); }
+  .card p { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; text-wrap: pretty; }
+  .card.danger { border-color: rgba(248,113,113,0.25); background: var(--danger-bg); }
+  .card.danger h3 { color: var(--danger); }
+  .card.warning { border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.05); }
+  .card.warning h3 { color: var(--warning); }
+  .card.success { border-color: rgba(52,211,153,0.25); background: rgba(52,211,153,0.05); }
+  .card.success h3 { color: var(--success); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; }
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .card-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .two-col { display: flex; gap: 30px; margin-top: 14px; }
+  .two-col > div { flex: 1; }
+  .two-col h3 { font-size: 0.92rem; margin-bottom: 6px; }
+  .list-item { font-size: 0.88rem; color: var(--text-dim); line-height: 1.6; padding: 4px 0 4px 16px; position: relative; }
+  .list-item::before { content: "·"; position: absolute; left: 0; color: var(--accent); font-weight: bold; font-size: 1.2rem; line-height: 1.5; }
+  .flow { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 0.82rem; flex-wrap: wrap; }
+  .flow .node { padding: 5px 10px; border-radius: 6px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text); font-weight: 500; font-size: 0.78rem; }
+  .flow .arrow { color: var(--accent); font-size: 0.95rem; }
+  .table-container { margin-top: 12px; }
+  .table-container table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .table-container th { text-align: left; padding: 8px 10px; font-weight: 600; color: var(--accent); border-bottom: 2px solid var(--border); font-size: 0.75rem; }
+  .table-container td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  .table-container tr:hover td { color: var(--text); background: var(--card); }
+  .risk-bar { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 0.8rem; }
+  .risk-bar .label { width: 100px; text-align: right; color: var(--text-dim); font-size: 0.78rem; flex-shrink: 0; }
+  .risk-bar .bar { flex: 1; height: 20px; border-radius: 3px; display: flex; align-items: center; padding: 0 8px; font-size: 0.72rem; font-weight: 600; }
+  .pyramid { display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 14px 0; }
+  .pyramid-level { display: flex; align-items: center; justify-content: center; border-radius: 5px; font-weight: 600; font-size: 0.78rem; }
+  .pyramid-l5 { width: 170px; background: var(--danger); color: #000; padding: 6px; }
+  .pyramid-l4 { width: 220px; background: #ef4444; color: #000; padding: 6px; }
+  .pyramid-l3 { width: 270px; background: var(--warning); color: #000; padding: 6px; }
+  .pyramid-l2 { width: 320px; background: var(--accent2); color: #000; padding: 6px; }
+  .pyramid-l1 { width: 370px; background: var(--accent); color: #000; padding: 6px; }
+  .inline-code { display: inline-block; background: var(--bg-light); border: 1px solid var(--border); border-radius: 3px; padding: 1px 7px; font-family: monospace; font-size: 0.8rem; color: var(--accent); }
+  .muted { color: var(--text-muted); font-size: 0.82rem; }
+  .text-accent { color: var(--accent); }
+  .text-danger { color: var(--danger); }
+  .text-warning { color: var(--warning); }
+  .text-success { color: var(--success); }
+  .tag { display: inline-block; font-size: 0.68rem; padding: 2px 9px; border-radius: 10px; font-weight: 600; }
+  .tag-red { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.25); }
+  .tag-blue { background: rgba(56,189,248,0.12); color: var(--accent); border: 1px solid rgba(56,189,248,0.25); }
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; z-index: 100; background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  }
+  .nav-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 5px 14px; border-radius: 5px; cursor: pointer; font-size: 0.78rem; }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .progress-bar { flex: 1; margin: 0 14px; height: 3px; background: var(--bg-light); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+  .slide-counter { color: var(--text-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 55px; text-align: right; }
+  .key-hint { position: fixed; bottom: 52px; right: 22px; font-size: 0.65rem; color: var(--text-muted); z-index: 100; }
+  .key-hint kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-light); font-family: inherit; }
+  @media (max-width: 768px) {
+    .slide { padding: 36px 26px; }
+    .slide.chapter h1 { font-size: 1.6rem; }
+    .slide h2 { font-size: 1.25rem; }
+    .card-grid, .card-grid-2, .card-grid-3 { grid-template-columns: 1fr; }
+    .two-col { flex-direction: column; gap: 14px; }
+    .pyramid-level { font-size: 0.68rem; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="slide-container" id="slides">
+
+<!-- 00: 开场 -->
+<div class="slide chapter active">
+  <div class="slide-number">00 / 15</div>
+  <div class="section-tag" style="color:var(--warning);border-color:rgba(251,191,36,0.3);">AI 运维治理</div>
+  <h1 style="margin-top:18px;">被避免的事故没有尸体</h1>
+  <p class="lead" style="color:var(--text-dim);font-weight:400;font-size:1rem;margin-top:10px;">AI 运维 Agent 的价值悖论与可观测治理</p>
+  <p class="lead" style="margin-top:12px;">从报警自动处理到 Agent 可观测、可统计、可审计、可归因</p>
+</div>
+
+<!-- 01: 幸存者论 -->
+<div class="slide">
+  <div class="slide-number">01 / 15</div>
+  <div class="section-tag" style="color:var(--warning);border-color:rgba(251,191,36,0.3);">核心矛盾</div>
+  <h2>做得好的 Agent，反而不容易被看到</h2>
+  <div class="two-col" style="margin-top:14px;">
+    <div>
+      <span class="tag tag-red">Agent 做得差</span>
+      <div class="list-item" style="color:var(--text-dim);">误操作</div>
+      <div class="list-item" style="color:var(--text-dim);">漏处理</div>
+      <div class="list-item" style="color:var(--text-dim);">报警没恢复</div>
+      <div class="list-item" style="color:var(--text-dim);">事故升级</div>
+      <div class="list-item" style="color:var(--text-dim);">人工投诉</div>
+      <p class="muted" style="margin-top:8px;">这些都很容易被看到。</p>
+    </div>
+    <div>
+      <span class="tag" style="background:rgba(52,211,153,0.12);color:var(--success);border:1px solid rgba(52,211,153,0.25);">Agent 做得好</span>
+      <div class="list-item" style="color:var(--text-dim);">报警被自动关闭</div>
+      <div class="list-item" style="color:var(--text-dim);">故障没有升级</div>
+      <div class="list-item" style="color:var(--text-dim);">用户没有感知</div>
+      <div class="list-item" style="color:var(--text-dim);">人工没有介入</div>
+      <div class="list-item" style="color:var(--text-dim);">事故系统没有记录</div>
+      <p class="muted" style="margin-top:8px;">最后管理层看到的：故障少了，但 AI 成本增加了。</p>
+    </div>
+  </div>
+  <div class="quote-warn" style="margin-top:16px;font-size:0.95rem;">
+    被避免的事故没有尸体，被节省的时间没有工单，被提前消除的风险没有账单。
+  </div>
+</div>
+
+<!-- 02: 展开核心句 -->
+<div class="slide">
+  <div class="slide-number">02 / 15</div>
+  <div class="section-tag" style="color:var(--warning);border-color:rgba(251,191,36,0.3);">核心展开</div>
+  <h2>被避免的事故没有尸体<br><small>AI Agent 的最大价值，恰恰是最难被证明的价值</small></h2>
+  <div class="card-grid-3" style="margin-top:14px;">
+    <div class="card danger">
+      <h3>被避免的事故没有尸体</h3>
+      <p>一次数据库连接池耗尽，AI Agent 在 3 分钟内完成判断和动作，业务甚至没有感知到异常。但事故报表上没有这条记录，复盘会议不会讨论它，季度汇报里也不会提到它。因为它"没有发生"。</p>
+      <p style="margin-top:6px;">一个处理了 5000 条报警的 Agent，在组织眼里可能不如一个处理了 50 条但每条都上了事故报告的人工工程师"显眼"。因为后者有记录、有复盘、有功劳。前者只有"一切正常"——而"一切正常"在组织里是最容易被忽略的状态。</p>
+    </div>
+    <div class="card warning">
+      <h3>被节省的时间没有工单</h3>
+      <p>人工处理一次接口错误率升高：收到通知、打开系统、查日志、看变更、找负责人、判断根因、执行动作、验证恢复——至少涉及 3-4 个人的碎片时间。AI Agent 用 4 分钟完成同样的事，但"节省的时间"不会自动变成一张工单。</p>
+      <p style="margin-top:6px;">更麻烦的是，被节省的时间往往是最碎片化的：夜间 2 点的唤醒、周末的告警、凌晨的发布故障。这些时间如果人工处理，是加班费、是调休、是人员流失的诱因。AI Agent 把它们省下来了，但组织财务系统看不到这笔"节省"。</p>
+    </div>
+    <div class="card">
+      <h3>被提前消除的风险没有账单</h3>
+      <p>灰度发布导致错误率升高，AI Agent 暂停灰度、切回旧版本、6 分钟完成恢复。如果没有 Agent，这个错误率可能 30 分钟后扩散到全量用户，演变成 P1 事故，涉及客服投诉、公关响应、客户赔偿、品牌损失。</p>
+      <p style="margin-top:6px;">但这些"未发生的损失"不会出现在任何账单上。你无法在财务报表上写一行"避免了 200 万潜在损失"——审计不会认可，管理层也无法验证。</p>
+    </div>
+  </div>
+  <div class="quote-warn" style="margin-top:14px;font-size:0.92rem;">
+    所以这句话的真正意思是：AI Agent 的价值论不是技术问题，是统计问题。传统运维的价值通过"发生了什么事 + 解决了什么事"来证明，而 AI Agent 的最大价值是"什么事没发生"——这个"没发生"需要主动的证据链才能被组织看见和承认。
+  </div>
+  <p class="muted" style="text-align:center;margin-top:10px;">这就是为什么 Agent Event Ledger 不是可选项，是必选项。</p>
+</div>
+
+<!-- 03: 数字运维员工 -->
+<div class="slide">
+  <div class="slide-number">03 / 15</div>
+  <div class="section-tag">视角转换</div>
+  <h2>AI Agent 不是自动化脚本<br><small>而是一个新的"数字运维员工"</small></h2>
+  <p class="subtitle">如果一个人类运维处理了报警，组织天然会要求：你处理了什么？怎么判断的？执行了什么？结果怎么样？有没有复盘？但到了 AI Agent，很多人只关心"有没有自动处理成功？"——这是不够的。</p>
+  <div class="table-container" style="margin-top:14px;">
+    <table>
+      <thead><tr><th>人类运维工程师</th><th>AI 运维 Agent</th></tr></thead>
+      <tbody>
+        <tr><td>值班记录</td><td>Agent 工作日志</td></tr>
+        <tr><td>工单流转</td><td>Agent 事件账本</td></tr>
+        <tr><td>操作审计</td><td>Action Trace</td></tr>
+        <tr><td>故障复盘</td><td>Agent Evaluation</td></tr>
+        <tr><td>绩效考核</td><td>ROI Dashboard</td></tr>
+        <tr><td>权限控制</td><td>Policy Gate</td></tr>
+        <tr><td>经验沉淀</td><td>Runbook Learning</td></tr>
+        <tr><td>交接班</td><td>Context Handoff</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 04: 不只是能执行 -->
+<div class="slide">
+  <div class="slide-number">04 / 15</div>
+  <div class="section-tag">问题升级</div>
+  <h2>AI Agent 不能只是会处理报警<br><small>它还必须能证明自己处理的过程、效果和价值</small></h2>
+  <div class="two-col" style="margin-top:14px;">
+    <div>
+      <span class="tag tag-blue">传统自动化关注</span>
+      <div class="list-item">能不能执行？</div>
+      <div class="list-item">能不能修复？</div>
+      <div class="list-item">能不能减少人工？</div>
+    </div>
+    <div>
+      <span class="tag tag-red">AI Agent 时代的问题</span>
+      <div class="list-item">为什么这么判断？</div>
+      <div class="list-item">依据了哪些上下文？</div>
+      <div class="list-item">执行了什么动作？</div>
+      <div class="list-item">避免了什么故障？</div>
+      <div class="list-item">有没有引入风险？</div>
+      <div class="list-item">价值如何被计量？</div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:14px;font-size:0.95rem;">
+    这不是一个单纯的 AIOps 技术问题，而是一个生产系统治理问题。
+  </div>
+</div>
+
+<!-- 05: 四层可观测 -->
+<div class="slide">
+  <div class="slide-number">05 / 15</div>
+  <div class="section-tag">可观测模型</div>
+  <h2>仅仅"可观测"还不够，要拆成四层</h2>
+  <div class="card-grid-2" style="margin-top:14px;">
+    <div class="card">
+      <h3>第一层：可追踪</h3>
+      <p><strong style="color:var(--text);">AI Agent 做了什么？</strong><br>收到什么报警、查询了哪些指标、检索了哪些日志、读取了哪些配置、调用了哪些工具、执行了哪些动作、操作了哪些资源、最终状态是什么。没有可追踪，就谈不上审计。</p>
+    </div>
+    <div class="card">
+      <h3>第二层：可解释</h3>
+      <p><strong style="color:var(--text);">AI Agent 为什么这么做？</strong><br>为什么认为这是某类故障？为什么选择这个方案？为什么没选其他方案？风险等级如何判断？是否匹配 runbook？是否参考了历史相似事件？是否存在不确定性？传统脚本只记录"执行了什么"，AI Agent 必须记录"为什么执行"。</p>
+    </div>
+    <div class="card">
+      <h3>第三层：可评估</h3>
+      <p><strong style="color:var(--text);">AI Agent 做得对不对？</strong><br>根因判断是否正确？处置动作是否有效？是否真正恢复？是否需要人工接管？是否发生复发？是否造成副作用？是否误关闭报警？这一步开始进入质量管理。</p>
+    </div>
+    <div class="card success">
+      <h3>第四层：可归因</h3>
+      <p><strong style="color:var(--text);">AI Agent 创造了多少价值？</strong>这是最难的——要证明的是"如果没有 AI Agent，这件事会变成什么样？"这涉及反事实推断。可归因才是 ROI 的基础。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 06: 组织感知断裂 -->
+<div class="slide">
+  <div class="slide-number">06 / 15</div>
+  <div class="section-tag">组织悖论</div>
+  <h2>技术价值与组织感知之间的断裂</h2>
+  <div class="two-col" style="margin-top:14px;">
+    <div>
+      <span class="tag tag-blue">技术团队看到的是</span>
+      <div class="list-item">自动关闭了 5000 条报警</div>
+      <div class="list-item">节省了很多排障时间</div>
+      <div class="list-item">降低了事故升级概率</div>
+      <div class="list-item">MTTR 优化、报警降噪、自动恢复</div>
+    </div>
+    <div>
+      <span class="tag tag-red">管理层关心的是</span>
+      <div class="list-item">省了多少钱？</div>
+      <div class="list-item">避免了多少损失？</div>
+      <div class="list-item">降低了多少风险？</div>
+      <div class="list-item">是否值得继续投入？</div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:14px;font-size:0.92rem;">
+    AI Agent 的可观测与统计，本质上是在建立一套技术价值到经营价值的翻译机制。
+  </div>
+</div>
+
+<!-- 07: ROI 六类价值 -->
+<div class="slide">
+  <div class="slide-number">07 / 15</div>
+  <div class="section-tag">价值维度</div>
+  <h2>ROI 不能只算人力节省</h2>
+  <div class="card-grid-3" style="margin-top:14px;">
+    <div class="card">
+      <h3>人工时间节省</h3>
+      <p>历史人工平均处理时长 - Agent 实际处理时长。例如同类报警人工 25 分钟，Agent 用 2 分钟，节省 23 分钟。但这是最浅层。</p>
+    </div>
+    <div class="card">
+      <h3>MTTR 缩短</h3>
+      <p>AI Agent 的优势不只是少用人，而是响应速度更快。对高价值业务来说，MTTR 缩短本身就是钱。</p>
+    </div>
+    <div class="card success">
+      <h3>事故升级减少</h3>
+      <p>把事故消灭在事故系统之外。从局部异常到 P1/P2，AI Agent 的价值在于提前截断升级链。</p>
+    </div>
+    <div class="card">
+      <h3>值班负担下降</h3>
+      <p>减少夜间无效唤醒。统计夜间报警数、人工唤醒次数、无效唤醒次数。影响工程效率和人员流失。</p>
+    </div>
+    <div class="card">
+      <h3>知识沉淀</h3>
+      <p>运维知识资产化。每次处理沉淀为故障模式、根因库、处置动作库。长期减少组织对个别专家的依赖。</p>
+    </div>
+    <div class="card">
+      <h3>风险降低</h3>
+      <p>减少人为错误。有规则约束和审计机制下，Agent 可能比人工夜间操作更稳定。归入风险成本降低、合规成本降低。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 08: Agent Event Ledger -->
+<div class="slide">
+  <div class="slide-number">08 / 15</div>
+  <div class="section-tag">核心概念</div>
+  <h2>Agent Event Ledger<br><small>AI Agent 事件账本</small></h2>
+  <p class="subtitle">不是普通日志。记录的是 AI Agent 作为一个行动主体，在一次运维事件中观察了什么、判断了什么、决定了什么、执行了什么、产生了什么结果。</p>
+  <div class="flow" style="margin-top:12px;font-size:0.78rem;">
+    <div class="node">报警触发</div><span class="arrow">→</span>
+    <div class="node">事件归并</div><span class="arrow">→</span>
+    <div class="node">上下文收集</div><span class="arrow">→</span>
+    <div class="node">根因假设</div><span class="arrow">→</span>
+    <div class="node">风险判断</div><span class="arrow">→</span>
+    <div class="node">处置计划</div><span class="arrow">→</span>
+    <div class="node">权限校验</div><span class="arrow">→</span>
+    <div class="node">动作执行</div><span class="arrow">→</span>
+    <div class="node">结果验证</div><span class="arrow">→</span>
+    <div class="node">人工升级或关闭</div><span class="arrow">→</span>
+    <div class="node">复盘评价</div><span class="arrow">→</span>
+    <div class="node">ROI 估算</div>
+  </div>
+  <p class="subtitle" style="margin-top:12px;">每一步都应该有结构化记录：event_id、alert_id、service、agent_id、context_sources、hypothesis、confidence、selected_action、rejected_actions、risk_level、execution_result、verification_result、human_intervention、estimated_saving……这让 AI Agent 的行为从"黑箱动作"变成"可审计事实"。</p>
+</div>
+
+<!-- 09: 价值凭证 -->
+<div class="slide">
+  <div class="slide-number">09 / 15</div>
+  <div class="section-tag">产品化</div>
+  <h2>每次处理生成一张"价值凭证"</h2>
+  <p class="subtitle">不只是生成日志，而是一张可以被管理层读懂的价值报告。</p>
+  <div style="margin-top:12px;background:var(--bg-light);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-size:0.82rem;line-height:1.7;max-width:580px;">
+    <span style="color:var(--accent);">事件：</span>订单服务错误率升高<br>
+    <span style="color:var(--accent);">报警等级：</span>P2 风险<br>
+    <span style="color:var(--accent);">AI 处理耗时：</span>4 分钟<br>
+    <span style="color:var(--accent);">AI 判断：</span>过去 10 分钟错误率从 0.2% 升至 8.7%，异常集中在 order-service-v3.18.2，同时间窗口存在灰度发布，数据库/缓存/消息队列正常 → 新版本灰度异常<br>
+    <span style="color:var(--accent);">执行：</span>暂停灰度 → 切回 v3.18.1 → 清理异常实例<br>
+    <span style="color:var(--accent);">验证：</span>错误率 6 分钟内恢复至 0.3%<br>
+    <span style="color:var(--warning);">价值：</span>历史同类事件人工平均 35 分钟，本次 6 分钟，估算节省 29 分钟，避免扩大灰度影响
+  </div>
+  <p class="subtitle" style="margin-top:10px;">这类记录可直接进入月度报告、季度 ROI 汇报、客户价值报告、审计材料——价值远高于一句"自动处理成功"。</p>
+</div>
+
+<!-- 10: 指标体系 -->
+<div class="slide">
+  <div class="slide-number">10 / 15</div>
+  <div class="section-tag">指标设计</div>
+  <h2>五类指标体系</h2>
+  <div class="card-grid-2" style="margin-top:12px;">
+    <div class="card">
+      <h3>覆盖指标——管了多少？</h3>
+      <p>报警覆盖率 · 服务覆盖率 · Runbook 覆盖率 · 工具覆盖率 · 知识库覆盖率</p>
+    </div>
+    <div class="card">
+      <h3>效率指标——快不快？</h3>
+      <p>MTTA · MTTR · 上下文收集耗时 · 自动执行耗时 · 验证耗时</p>
+    </div>
+    <div class="card">
+      <h3>自动化指标——能不能闭环？</h3>
+      <p>自动处理率 · 半自动处理率 · 人工升级率 · 建议采纳率 · 一次解决率</p>
+    </div>
+    <div class="card">
+      <h3>质量指标——做得准不准？</h3>
+      <p>根因准确率 · 误关闭率 · 复发率 · 回滚率 · 副作用率 · 人工纠正率</p>
+    </div>
+  </div>
+  <div class="card success" style="margin-top:10px;">
+    <h3>价值指标——值多少钱？</h3>
+    <p>节省人工分钟数 · 避免事故数 · MTTR 降低收益 · 夜间唤醒减少 · SLA 风险减少 · 专家介入减少</p>
+  </div>
+  <div class="quote-warn" style="margin-top:12px;font-size:0.88rem;">
+    自动处理率不能单独看。否则很容易刷指标——大量关闭低价值报警、只处理简单问题、复杂问题全部升级人工。
+  </div>
+</div>
+
+<!-- 11: 可信闭环率 + 反事实基线 -->
+<div class="slide">
+  <div class="slide-number">11 / 15</div>
+  <div class="section-tag">核心判断</div>
+  <h2>自动处理率是危险指标<br><small>可信闭环率才是有效指标</small></h2>
+  <div style="margin-top:12px;text-align:center;">
+    <div style="background:var(--bg-light);border:1px solid var(--border);border-radius:8px;padding:14px 24px;display:inline-block;">
+      <span style="font-size:1.1rem;font-weight:700;color:var(--success);">可信闭环率</span>
+      <p style="margin-top:4px;font-size:0.85rem;color:var(--text-dim);">= 自动处理且通过验证且无短期复发的事件比例</p>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:14px;">更深层的问题是：AI Agent 的 ROI 难算，是因为它经常创造的是<strong class="text-accent">"未发生的结果"</strong>——你怎么证明"如果没有 AI Agent，这件事会怎样？"这是反事实推断。</p>
+  <div class="card-grid-2" style="margin-top:12px;">
+    <div class="card">
+      <h3>历史同类事件对比</h3>
+      <p>用过去同类报警作为参照基线，对比响应时间、恢复时间、升级比例、人工参与人数。</p>
+    </div>
+    <div class="card">
+      <h3>灰度对照</h3>
+      <p>部分业务启用 Agent，部分不启用。对比 MTTR、升级率、人工参与时长、复发率。</p>
+    </div>
+    <div class="card">
+      <h3>影子模式</h3>
+      <p>Agent 不执行，只观察和建议。比较 AI 建议动作 vs 人工实际动作，统计建议一致率、根因命中率。</p>
+    </div>
+    <div class="card">
+      <h3>历史回放</h3>
+      <p>把历史报警、日志、指标、变更记录回放给 Agent。看它能否复现当时的判断路径。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 12: 权限分级 -->
+<div class="slide">
+  <div class="slide-number">12 / 15</div>
+  <div class="section-tag">权限治理</div>
+  <h2>AI Agent 的权限必须分级</h2>
+  <div class="pyramid" style="margin-top:14px;">
+    <div class="pyramid-level pyramid-l5">L4 · 禁止：不可逆删除、绕过审批、关闭安全策略</div>
+    <div class="pyramid-level pyramid-l4">L3 · 高风险：数据库写操作、核心链路切换、安全策略变更</div>
+    <div class="pyramid-level pyramid-l3">L2 · 中风险：服务限流、流量切换、灰度暂停、自动回滚</div>
+    <div class="pyramid-level pyramid-l2">L1 · 低风险：重启无状态实例、清理临时文件、关闭重复报警</div>
+    <div class="pyramid-level pyramid-l1">L0 · 只读：查指标、查日志、查配置、查 CMDB、生成建议</div>
+  </div>
+  <p class="muted" style="text-align:center;margin-top:8px;">Agent 不应该成为超级管理员。用户有什么权限，Agent 只能代表用户使用什么权限。</p>
+</div>
+
+<!-- 13: 架构 + 成熟度 -->
+<div class="slide">
+  <div class="slide-number">13 / 15</div>
+  <div class="section-tag">架构与成熟度</div>
+  <h2>Agent 可观测架构</h2>
+  <div class="flow" style="font-size:0.72rem;margin-top:10px;">
+    <div class="node">Alert Manager</div><span class="arrow">→</span><div class="node">Event Correlator</div><span class="arrow">→</span><div class="node">Agent Orchestrator</div><span class="arrow">→</span><div class="node">Context Collector</div><span class="arrow">→</span><div class="node">Reasoning</div><span class="arrow">→</span><div class="node" style="border-color:var(--warning);color:var(--warning);">Policy Gate</div><span class="arrow">→</span><div class="node">Action Executor</div><span class="arrow">→</span><div class="node" style="border-color:var(--success);color:var(--success);">Verification</div><span class="arrow">→</span><div class="node">Event Ledger</div><span class="arrow">→</span><div class="node" style="border-color:var(--accent2);color:var(--accent2);">ROI Engine</div>
+  </div>
+  <div class="two-col" style="margin-top:14px;">
+    <div class="card warning">
+      <h3>Policy / Risk Gate</h3>
+      <p>决定 Agent 能不能做。权限校验、风险分级、审批流程、影响面判断、动作白名单、回滚要求。</p>
+    </div>
+    <div class="card success">
+      <h3>Verification Engine</h3>
+      <p>决定做完后是不是真的恢复了。报警是否恢复、核心指标是否恢复、错误率是否下降、是否产生新报警。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px;">
+    <h3>Evaluation & ROI Engine</h3>
+    <p>与历史基线对比、计算节省时间、估算避免事故、统计人工减少、分析复发情况、生成价值报告。</p>
+  </div>
+  <p class="muted" style="margin-top:10px;text-align:center;">成熟度模型：L1 建议型 → L2 半自动 → L3 低风险闭环 → L4 策略约束自治 → L5 自优化</p>
+</div>
+
+<!-- 14: 七个关键观点 -->
+<div class="slide">
+  <div class="slide-number">14 / 15</div>
+  <div class="section-tag">关键观点</div>
+  <h2>可以反复强调的七个判断</h2>
+  <div class="card-grid-2" style="margin-top:12px;">
+    <div class="card"><p style="font-size:0.82rem;color:var(--text);">AI Agent 自动处理报警不是终点，自动处理之后能否被组织理解、信任和度量，才是落地关键。</p></div>
+    <div class="card danger"><p style="font-size:0.82rem;">一个不能被观测和审计的 AI Agent，本质上不是生产力工具，而是新的生产风险。</p></div>
+    <div class="card warning"><p style="font-size:0.82rem;">被避免的事故不会自动出现在事故报表里，所以 AI Agent 必须主动生成价值证据。</p></div>
+    <div class="card"><p style="font-size:0.82rem;color:var(--text);">AI Agent 的 ROI 不应只看节省了几个人，而要看它降低了多少故障时间、事故升级、夜间唤醒和组织知识损耗。</p></div>
+    <div class="card danger"><p style="font-size:0.82rem;">自动处理率是危险指标，可信闭环率才是有效指标。</p></div>
+    <div class="card"><p style="font-size:0.82rem;color:var(--text);">AI Agent 应该像数字员工一样被管理：有权限、有日志、有绩效、有复盘、有审计。</p></div>
+  </div>
+  <div class="quote" style="margin-top:12px;font-size:0.9rem;text-align:center;border-left:none;padding:0;">
+    未来的 AIOps 竞争，不只是模型能力竞争，而是 Agent 治理体系和价值度量体系的竞争。
+  </div>
+</div>
+
+<!-- 15: 结语 -->
+<div class="slide chapter">
+  <div class="slide-number">15 / 15</div>
+  <div class="section-tag" style="color:var(--warning);border-color:rgba(251,191,36,0.3);">结语</div>
+  <h1 style="margin-top:18px;font-size:1.8rem;line-height:1.4;">下一代 AIOps 的关键能力</h1>
+  <h1 style="font-size:1.3rem;font-weight:600;color:var(--text-dim);margin-top:6px;line-height:1.4;">不只是自动修复</h1>
+  <div class="quote" style="margin-top:24px;text-align:center;border-left:none;padding:0;max-width:600px;font-size:1.05rem;">
+    而是围绕 Agent 行为建立<br><span class="text-accent">可观测、可审计、可统计、可归因</span>的<br>运维价值闭环
+  </div>
+  <p class="lead" style="margin-top:16px;">AI Agent 越成功，越可能因为"问题没有发生"而无法证明价值。<br>所以它必须主动生成价值证据——这不是锦上添花，是落地前提。</p>
+</div>
+
+</div>
+
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevSlide()">&larr; 上一页</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="slide-counter" id="slideCounter">1 / 15</span>
+  <button class="nav-btn" id="nextBtn" onclick="nextSlide()">下一页 &rarr;</button>
+</div>
+<div class="key-hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> 或 <kbd>Space</kbd> 翻页</div>
+
+<script>
+const slides=document.querySelectorAll('.slide');let current=0;
+function showSlide(index,dir){if(index<0||index>=slides.length)return;slides[current].classList.remove('active','enter-left','enter-right');current=index;slides[current].classList.add('active');slides[current].classList.add(dir==='right'?'enter-right':'enter-left');setTimeout(()=>slides[current].classList.remove('enter-right','enter-left'),500);document.getElementById('prevBtn').disabled=current===0;document.getElementById('nextBtn').disabled=current===slides.length-1;document.getElementById('progressFill').style.width=((current+1)/slides.length*100)+'%';document.getElementById('slideCounter').textContent=(current+1)+' / '+slides.length;}
+function nextSlide(){showSlide(current+1,'right');}function prevSlide(){showSlide(current-1,'left');}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nextSlide();}if(e.key==='ArrowLeft'){e.preventDefault();prevSlide();}});
+let touchStartX=0;document.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;});document.addEventListener('touchend',e=>{const diff=touchStartX-e.changedTouches[0].clientX;if(Math.abs(diff)>50){diff>0?nextSlide():prevSlide();}});
+showSlide(0,'right');
+</script>
+</body>
+</html>
