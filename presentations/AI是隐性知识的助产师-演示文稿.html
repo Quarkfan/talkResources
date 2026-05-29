@@ -835,6 +835,7 @@ function updateSlide(direction) {
 function showSlide(index) {
   if (index < 0 || index >= slides.length) return;
   const dir = index > current ? 'right' : 'left';
+  slides[current].classList.remove('active', 'enter-left', 'enter-right');
   current = index;
   slides[current].classList.add('active');
   slides[current].classList.add(dir === 'right' ? 'enter-right' : 'enter-left');
